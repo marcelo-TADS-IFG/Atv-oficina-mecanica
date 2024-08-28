@@ -161,11 +161,7 @@ public class PecaDAO {
                 peca.setId(resultSet.getInt("id"));
                 peca.setDescricao(resultSet.getString("descricao"));
                 peca.setPreco(resultSet.getBigDecimal("preco"));
-
-                // Buscar a marca correspondente
-                Marca marca = new Marca();
-                marca.setId(resultSet.getInt("id_marca"));
-                peca.setMarca(marca);
+                peca.setMarca(marcaController.buscarMarcaPorId(resultSet.getInt("id_marca")));
 
                 lista.add(peca);
             }
@@ -180,4 +176,5 @@ public class PecaDAO {
             return null;
         }
     }
+
 }

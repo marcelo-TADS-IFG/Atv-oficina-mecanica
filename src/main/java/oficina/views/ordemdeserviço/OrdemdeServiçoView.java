@@ -4,6 +4,7 @@ import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox; // Importação adicionada
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H3;
@@ -35,8 +36,8 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         ComboBox comboBox = new ComboBox();
         ComboBox comboBox2 = new ComboBox();
         ComboBox comboBox3 = new ComboBox();
-        ComboBox comboBox4 = new ComboBox();
-        ComboBox comboBox5 = new ComboBox();
+        MultiSelectComboBox comboBox4 = new MultiSelectComboBox(); // Alterado para MultiSelectComboBox
+        MultiSelectComboBox comboBox5 = new MultiSelectComboBox();
         HorizontalLayout layoutRow = new HorizontalLayout();
         Button buttonPrimary = new Button();
         Button buttonPrimary2 = new Button();
@@ -70,10 +71,10 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         setComboBoxSampleData(comboBox3);
         comboBox4.setLabel("Peças");
         comboBox4.setWidth("min-content");
-        setComboBoxSampleData(comboBox4);
+        setMultiSelectComboBoxSampleData(comboBox4); // Método atualizado
         comboBox5.setLabel("Serviços");
         comboBox5.setWidth("min-content");
-        setComboBoxSampleData(comboBox5);
+        setMultiSelectComboBoxSampleData(comboBox5);
         layoutRow.addClassName(Gap.MEDIUM);
         layoutRow.setWidth("100%");
         layoutRow.getStyle().set("flex-grow", "1");
@@ -112,6 +113,16 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
     }
 
     private void setComboBoxSampleData(ComboBox comboBox) {
+        List<SampleItem> sampleItems = new ArrayList<>();
+        sampleItems.add(new SampleItem("first", "First", null));
+        sampleItems.add(new SampleItem("second", "Second", null));
+        sampleItems.add(new SampleItem("third", "Third", Boolean.TRUE));
+        sampleItems.add(new SampleItem("fourth", "Fourth", null));
+        comboBox.setItems(sampleItems);
+        comboBox.setItemLabelGenerator(item -> ((SampleItem) item).label());
+    }
+
+    private void setMultiSelectComboBoxSampleData(MultiSelectComboBox comboBox) { // Método adicionado
         List<SampleItem> sampleItems = new ArrayList<>();
         sampleItems.add(new SampleItem("first", "First", null));
         sampleItems.add(new SampleItem("second", "Second", null));

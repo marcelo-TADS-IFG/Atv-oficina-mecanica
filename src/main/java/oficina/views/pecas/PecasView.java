@@ -44,7 +44,7 @@ public class PecasView extends Composite<VerticalLayout> {
         pecaController = new PecaController();
         marcaController = new MarcaController();
 
-        Tab tabGerenciar = new Tab("Gerenciar Peças");
+        Tab tabGerenciar = new Tab("Gerenciar Peça");
         Tab tabConsultar = new Tab("Consultar Peças");
         Tabs tabs = new Tabs(tabGerenciar, tabConsultar);
 
@@ -314,6 +314,7 @@ public class PecasView extends Composite<VerticalLayout> {
                     textFieldDescricao.setValue(peca.getDescricao());
                     textFieldPreco.setValue(String.valueOf(peca.getPreco()));
                     comboBoxMarca.setValue(peca.getMarca());
+
                     Notification.show("Peça encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textFieldDescricao.focus();
@@ -339,34 +340,87 @@ public class PecasView extends Composite<VerticalLayout> {
         comboBoxMarca.clear();
     }
 
-    // Método auxiliar para abrir o diálogo de pesquisa por nome da peça
-    private void abrirDialogoDePesquisaPeca(TextField textFieldID, TextField textFieldNome, TextField textFieldPreco,
+    private void abrirDialogoDePesquisaPeca(TextField textFieldID, TextField textFieldDescricao,
+            TextField textFieldPreco,
             ComboBox<Marca> comboBoxMarca) {
         // Criar a caixa de diálogo para a pesquisa
         Dialog dialog = new Dialog();
         dialog.setWidth("400px");
 
-        // Criar um campo de texto para o nome da peça
-        TextField textFieldNomePesquisa = new TextField("Nome da Peça");
-        Button buttonBuscar = new Button("Buscar", event -> {
-            String nome = textFieldNomePesquisa.getValue().trim();
-            if (!nome.isEmpty()) {
-                // Implementar a lógica de mostrar as peças por nome
-                mostrarPecasPorNome(nome);
-                dialog.close();
-            } else {
-                Notification.show("O nome da peça não pode ser vazio.", 3000, Notification.Position.MIDDLE)
-                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            }
+        // ComboBox para buscar peças pelo nome
+        ComboBox<Peca> comboBox = new ComboBox<>("Buscar Peça");
+        comboBox.setPlaceholder("Digite o nome da peça");
+        comboBox.setItemLabelGenerator(Peca::getDescricao);
+
+        // Configura o comboBox para atualizar a lista conforme o usuário digita
+        comboBox.addCustomValueSetListener(event -> {
+            String nomePeca = event.getDetail().toLowerCase(); // Converte para minúsculas para busca case-insensitive
+            List<Peca> pecasFiltradas = pecaController.buscarPecaPorNome(nomePeca);
+            comboBox.setItems(pecasFiltradas);
         });
 
-        dialog.add(textFieldNomePesquisa, buttonBuscar);
+        // Botão de confirmar seleção
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Peca pecaSelecionada = comboBox.getValue();
+            if (pecaSelecionada != null) {
+                textFieldID.setValue(String.valueOf(pecaSelecionada.getId()));
+                textFieldDescricao.setValue(pecaSelecionada.getDescricao());
+                textFieldPreco.setValue(String.valueOf(pecaSelecionada.getPreco()));
+                comboBoxMarca.setValue(pecaSelecionada.getMarca());
+
+                Notification.show("Peça selecionada: " + pecaSelecionada.getDescricao(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            } else {
+                Notification.show("Nenhuma peça selecionada.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+            dialog.close();
+        });
+
+        // Botão de cancelar
+        Button cancelarButton = new Button("Cancelar", e -> dialog.close());
+
+        // Layout da caixa de diálogo
+        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
+        dialog.add(layout);
+
         dialog.open();
     }
 
     private void mostrarPecasPorNome(String nome) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'mostrarPecasPorNome'");
+        // Buscar peças pelo nome usando o pecaController
+        List<Peca> pecasEncontradas = pecaController.buscarPecaPorNome(nome);
+    
+        if (pecasEncontradas != null && !pecasEncontradas.isEmpty()) {
+            // Criar um diálogo para mostrar os resultados
+            Dialog resultadoDialog = new Dialog();
+            resultadoDialog.setWidth("600px");
+    
+            // Criar um Grid para exibir os detalhes das peças encontradas
+            Grid<Peca> gridPecas = new Grid<>(Peca.class, false);
+            gridPecas.addColumn(Peca::getId).setHeader("ID").setFlexGrow(0);
+            gridPecas.addColumn(Peca::getDescricao).setHeader("Descrição");
+            gridPecas.addColumn(peca -> String.format("%.2f", peca.getPreco())).setHeader("Preço");
+            gridPecas.addColumn(peca -> peca.getMarca().getNome_marca()).setHeader("Marca");
+    
+            // Preencher o Grid com as peças encontradas
+            gridPecas.setItems(pecasEncontradas);
+    
+            // Adicionar o Grid ao diálogo
+            resultadoDialog.add(gridPecas);
+    
+            // Botão de fechar o diálogo
+            Button fecharButton = new Button("Fechar", event -> resultadoDialog.close());
+            resultadoDialog.add(new HorizontalLayout(fecharButton));
+    
+            // Abrir o diálogo
+            resultadoDialog.open();
+        } else {
+            Notification.show("Nenhuma peça encontrada com o nome: " + nome, 3000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
     }
+    
 
 }

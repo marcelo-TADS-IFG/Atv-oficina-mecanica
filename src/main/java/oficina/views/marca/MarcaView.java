@@ -40,7 +40,7 @@ public class MarcaView extends Composite<VerticalLayout> {
         marcaController = new MarcaController();
 
         Tab tabGerenciar = new Tab("Gerenciar Marca");
-        Tab tabConsultar = new Tab("Consultar Marca");
+        Tab tabConsultar = new Tab("Consultar Marcas");
         Tabs tabs = new Tabs(tabGerenciar, tabConsultar);
 
         VerticalLayout layoutColumn2 = new VerticalLayout();

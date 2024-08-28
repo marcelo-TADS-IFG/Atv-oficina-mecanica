@@ -5,7 +5,9 @@ import java.util.List;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
@@ -39,7 +41,7 @@ public class ClienteView extends Composite<VerticalLayout> {
 
         // Create tabs
         Tab tabGerenciar = new Tab("Gerenciar Cliente");
-        Tab tabConsultar = new Tab("Consultar Cliente");
+        Tab tabConsultar = new Tab("Consultar Clientes");
         Tabs tabs = new Tabs(tabGerenciar, tabConsultar);
 
         // Create layout for managing client
@@ -111,7 +113,7 @@ public class ClienteView extends Composite<VerticalLayout> {
                 emailFieldCpf, textFieldCidade, textFieldTelefone));
         buttonExcluir.addClickListener(event -> excluirCliente(textFieldID, textFieldNome, textFieldEndereco,
                 emailFieldCpf, textFieldCidade, textFieldTelefone));
-        buttonPesquisar.addClickListener(event -> pesquisarCliente(textFieldNome));
+        buttonPesquisar.addClickListener(event -> pesquisarCliente(textFieldID, textFieldNome, textFieldEndereco, emailFieldCpf, textFieldCidade, textFieldTelefone));
 
         // Double-click event on grid
         gridConsulta.addItemDoubleClickListener(event -> {
@@ -143,10 +145,10 @@ public class ClienteView extends Composite<VerticalLayout> {
             // Verificar se os campos obrigatórios não estão vazios
             if (!nome.isEmpty() && !endereco.isEmpty() && !cpf.isEmpty() && !cidade.isEmpty() && !telefone.isEmpty()) {
                 // Converter ID, assumindo que é um campo numérico
-                int id = Integer.parseInt(textFieldID.getValue().trim());
+                //int id = Integer.parseInt(textFieldID.getValue().trim());
 
                 // Criar o objeto Cliente
-                Cliente cliente = new Cliente(id, nome, endereco, cpf, cidade, telefone);
+                Cliente cliente = new Cliente(0, nome, endereco, cpf, cidade, telefone);
 
                 // Adicionar o cliente usando o controlador
                 if (clienteController.adicionarCliente(cliente)) {
@@ -275,6 +277,77 @@ public class ClienteView extends Composite<VerticalLayout> {
             Notification.show("Preencha o campo ID.", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
+    }
+
+    private void pesquisarCliente(TextField textFieldID, TextField textFieldNome, TextField textFieldEndereco,
+    EmailField emailFieldCpf, TextField textFieldCidade, TextField textFieldTelefone) {
+        String idText = textFieldID.getValue();
+
+        if (!idText.isEmpty()) {
+            try {
+                int id = Integer.parseInt(idText);
+
+                Cliente cliente = clienteController.buscarClientePorId(id);
+
+                if (cliente != null) {
+                    textFieldNome.setValue(cliente.getNome());
+                    textFieldTelefone.setValue(cliente.getTelefone());
+                    Notification.show("Cliente encontrado.", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                    textFieldNome.focus();
+                } else {
+                    textFieldNome.clear();
+                    textFieldTelefone.clear();
+                    textFieldID.focus();
+                    Notification.show("Cliente não encontrado.", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
+            } catch (NumberFormatException e) {
+                Notification.show("ID inválido.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        } else {
+            abrirDialogoDePesquisaCliente(textFieldID, textFieldNome);
+        }
+    }
+
+    private void abrirDialogoDePesquisaCliente(TextField textFieldID, TextField textFieldNome) {
+        Dialog dialog = new Dialog();
+        dialog.setWidth("400px");
+
+        ComboBox<Cliente> comboBox = new ComboBox<>("Buscar Cliente");
+        comboBox.setPlaceholder("Digite o nome do cliente");
+        comboBox.setItemLabelGenerator(Cliente::getNome);
+
+        // Configura o comboBox para atualizar a lista conforme o usuário digita
+        comboBox.addCustomValueSetListener(event -> {
+            String nomeCliente = event.getDetail().toLowerCase(); // Converte para minúsculas para busca
+                                                                  // case-insensitive
+            List<Cliente> clientesFiltrados = clienteController.buscarClientesPorNome(nomeCliente);
+            comboBox.setItems(clientesFiltrados);
+        });
+
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Cliente clienteSelecionado = comboBox.getValue();
+            if (clienteSelecionado != null) {
+                textFieldID.setValue(String.valueOf(clienteSelecionado.getId()));
+                textFieldNome.setValue(clienteSelecionado.getNome());
+                Notification.show("Cliente selecionado: " + clienteSelecionado.getNome(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            } else {
+                Notification.show("Nenhum cliente selecionado.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+            dialog.close();
+        });
+
+        Button cancelarButton = new Button("Cancelar", e -> dialog.close());
+
+        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
+        dialog.add(layout);
+
+        dialog.open();
     }
 
     private void pesquisarCliente(TextField textFieldNome) {

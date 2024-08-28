@@ -40,7 +40,7 @@ public class ServiçosView extends Composite<VerticalLayout> {
     public ServiçosView() {
         servicoController = new ServicoController();
 
-        Tab tabGerenciar = new Tab("Gerenciar Serviços");
+        Tab tabGerenciar = new Tab("Gerenciar Serviço");
         Tab tabConsultar = new Tab("Consultar Serviços");
         Tabs tabs = new Tabs(tabGerenciar, tabConsultar);
 
