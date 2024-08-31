@@ -40,4 +40,9 @@ public class Peca {
         this.marca = marca;
     }
 
+    public int getQuantidade() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getQuantidade'");
+    }
+
 }

@@ -1,5 +1,8 @@
 package oficina.views.ordemdeserviço;
 
+import oficina.models.OS;
+import oficina.controllers.OSController;
+
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -7,42 +10,108 @@ import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox; // Importação adicionada
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.tabs.Tab;
+import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility.Gap;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.checkerframework.checker.units.qual.m;
+
 import oficina.views.MainLayout;
+import java.math.BigDecimal;
+
+import oficina.controllers.ClienteController;
+import oficina.models.Cliente;
+import oficina.models.Marca;
+import oficina.controllers.MecanicoController;
+import oficina.models.Mecanico;
+import oficina.controllers.VeiculoController;
+import oficina.models.Veiculo;
+import oficina.controllers.PecaController;
+import oficina.models.Peca;
+import oficina.controllers.ServicoController;
+import oficina.models.Servico;
 
 @PageTitle("Ordem de Serviço")
-@Route(value = "person-form5", layout = MainLayout.class)
+@Route(value = "Ordem de Servico", layout = MainLayout.class)
 public class OrdemdeServiçoView extends Composite<VerticalLayout> {
 
+    private PecaController pecaController;
+    private ServicoController servicoController;
+    private ClienteController clienteController;
+    private MecanicoController mecanicoController;
+    private VeiculoController veiculoController;
+
+    private OSController osController;
+
+    private Grid<OS> gridConsultaOS;
+
+    MultiSelectComboBox<Peca> comboBoxPecas = new MultiSelectComboBox(); // Alterado para MultiSelectComboBox
+    MultiSelectComboBox<Servico> comboBoxServicos = new MultiSelectComboBox();
+
+    TextField textFieldValorTotal = new TextField();
+
     public OrdemdeServiçoView() {
+
+        clienteController = new ClienteController();
+        mecanicoController = new MecanicoController();
+        veiculoController = new VeiculoController();
+        pecaController = new PecaController();
+        servicoController = new ServicoController();
+        osController = new OSController();
+
+        Tab tabGerenciar = new Tab("Gerenciar Ordem de Servico");
+        Tab tabConsultar = new Tab("Consultar Ordem de Servicos");
+        Tabs tabs = new Tabs(tabGerenciar, tabConsultar);
+
+        VerticalLayout layoutConsulta = new VerticalLayout();
+        H3 h3Consulta = new H3("Consultar Ordens de serviços");
+        gridConsultaOS = new Grid<>(OS.class);
+        layoutConsulta.add(h3Consulta, gridConsultaOS);
+        layoutConsulta.setVisible(false);
         VerticalLayout layoutColumn2 = new VerticalLayout();
+
+        getContent().add(tabs, layoutColumn2, layoutConsulta);
+
+        tabs.addSelectedChangeListener(event -> {
+            boolean isGerenciarTabSelected = tabs.getSelectedTab() == tabGerenciar;
+            layoutColumn2.setVisible(isGerenciarTabSelected);
+            layoutConsulta.setVisible(!isGerenciarTabSelected);
+            if (!isGerenciarTabSelected) {
+                atualizarGridConsulta();
+            }
+        });
+
         H3 h3 = new H3();
         FormLayout formLayout2Col = new FormLayout();
-        TextField textField = new TextField();
-        TextField textField2 = new TextField();
-        DateTimePicker dateTimePicker = new DateTimePicker();
-        DateTimePicker dateTimePicker2 = new DateTimePicker();
-        TextField textField3 = new TextField();
-        ComboBox comboBox = new ComboBox();
-        ComboBox comboBox2 = new ComboBox();
-        ComboBox comboBox3 = new ComboBox();
-        MultiSelectComboBox comboBox4 = new MultiSelectComboBox(); // Alterado para MultiSelectComboBox
-        MultiSelectComboBox comboBox5 = new MultiSelectComboBox();
+        TextField textFieldID = new TextField();
+        TextField textFieldNumeroOS = new TextField();
+        DateTimePicker dateTimeAberturaOS = new DateTimePicker();
+        DateTimePicker dateTimePickerEncerramentoOS = new DateTimePicker();
+
+        ComboBox<Cliente> comboBoxCliente = new ComboBox();
+        ComboBox<Mecanico> comboBoxMecanico = new ComboBox();
+        ComboBox<Veiculo> comboBoxVeiculo = new ComboBox();
+
+        comboBoxPecas.addValueChangeListener(event -> calcularValorTotal());
+        comboBoxServicos.addValueChangeListener(event -> calcularValorTotal());
         HorizontalLayout layoutRow = new HorizontalLayout();
-        Button buttonPrimary = new Button();
-        Button buttonPrimary2 = new Button();
-        Button buttonPrimary3 = new Button();
-        Button buttonSecondary = new Button();
+        Button buttonPrimarySalvar = new Button();
+        Button buttonPrimaryAlterar = new Button();
+        Button buttonPrimaryExcluir = new Button();
+        Button buttonSecondaryPesquisar = new Button();
         getContent().setWidth("100%");
         getContent().getStyle().set("flex-grow", "1");
         getContent().setJustifyContentMode(JustifyContentMode.START);
@@ -53,82 +122,147 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         h3.setText("Gerenciar OS");
         h3.setWidth("100%");
         formLayout2Col.setWidth("100%");
-        textField.setLabel("ID");
-        textField2.setLabel("Numero OS");
-        dateTimePicker.setLabel("Data Abertura OS");
-        dateTimePicker.setWidth("min-content");
-        dateTimePicker2.setLabel("Data encerramento OS");
-        dateTimePicker2.setWidth("min-content");
-        textField3.setLabel("Valor Total");
-        comboBox.setLabel("Cliente");
-        comboBox.setWidth("min-content");
-        setComboBoxSampleData(comboBox);
-        comboBox2.setLabel("Mecânico");
-        comboBox2.setWidth("min-content");
-        setComboBoxSampleData(comboBox2);
-        comboBox3.setLabel("Veículo");
-        comboBox3.setWidth("min-content");
-        setComboBoxSampleData(comboBox3);
-        comboBox4.setLabel("Peças");
-        comboBox4.setWidth("min-content");
-        setMultiSelectComboBoxSampleData(comboBox4); // Método atualizado
-        comboBox5.setLabel("Serviços");
-        comboBox5.setWidth("min-content");
-        setMultiSelectComboBoxSampleData(comboBox5);
+        textFieldID.setLabel("ID");
+        textFieldNumeroOS.setLabel("Numero OS");
+        dateTimeAberturaOS.setLabel("Data Abertura OS");
+        dateTimeAberturaOS.setWidth("min-content");
+        dateTimePickerEncerramentoOS.setLabel("Data encerramento OS");
+        dateTimePickerEncerramentoOS.setWidth("min-content");
+        textFieldValorTotal.setLabel("Valor Total");
+        comboBoxCliente.setLabel("Cliente");
+        comboBoxCliente.setWidth("min-content");
+        setComboBoxClientes(comboBoxCliente);
+        comboBoxMecanico.setLabel("Mecânico");
+        comboBoxMecanico.setWidth("min-content");
+        setComboBoxMecanicos(comboBoxMecanico);
+        comboBoxVeiculo.setLabel("Veículo");
+        comboBoxVeiculo.setWidth("min-content");
+        setComboBoxVeiculos(comboBoxVeiculo);
+        comboBoxPecas.setLabel("Peças");
+        comboBoxPecas.setWidth("min-content");
+        setMultiSelectComboBoxPecas(comboBoxPecas); // Método atualizado
+        comboBoxServicos.setLabel("Serviços");
+        comboBoxServicos.setWidth("min-content");
+        setMultiSelectComboBoxServicos(comboBoxServicos);
         layoutRow.addClassName(Gap.MEDIUM);
         layoutRow.setWidth("100%");
         layoutRow.getStyle().set("flex-grow", "1");
-        buttonPrimary.setText("Salvar");
-        buttonPrimary.setWidth("min-content");
-        buttonPrimary.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonPrimary2.setText("Alterar");
-        buttonPrimary2.setWidth("min-content");
-        buttonPrimary2.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonPrimary3.setText("Excluir");
-        buttonPrimary3.setWidth("min-content");
-        buttonPrimary3.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonSecondary.setText("Pesquisar");
-        buttonSecondary.setWidth("min-content");
+        buttonPrimarySalvar.setText("Salvar");
+        buttonPrimarySalvar.setWidth("min-content");
+        buttonPrimarySalvar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        buttonPrimaryAlterar.setText("Alterar");
+        buttonPrimaryAlterar.setWidth("min-content");
+        buttonPrimaryAlterar.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
+        buttonPrimaryExcluir.setText("Excluir");
+        buttonPrimaryExcluir.setWidth("min-content");
+        buttonPrimaryExcluir.addThemeVariants(ButtonVariant.LUMO_ERROR);
+        buttonSecondaryPesquisar.setText("Pesquisar");
+        buttonSecondaryPesquisar.setWidth("min-content");
         getContent().add(layoutColumn2);
         layoutColumn2.add(h3);
         layoutColumn2.add(formLayout2Col);
-        formLayout2Col.add(textField);
-        formLayout2Col.add(textField2);
-        formLayout2Col.add(dateTimePicker);
-        formLayout2Col.add(dateTimePicker2);
-        formLayout2Col.add(textField3);
-        formLayout2Col.add(comboBox);
-        formLayout2Col.add(comboBox2);
-        formLayout2Col.add(comboBox3);
-        formLayout2Col.add(comboBox4);
-        formLayout2Col.add(comboBox5);
+        formLayout2Col.add(textFieldID);
+        formLayout2Col.add(textFieldNumeroOS);
+        formLayout2Col.add(dateTimeAberturaOS);
+        formLayout2Col.add(dateTimePickerEncerramentoOS);
+        formLayout2Col.add(textFieldValorTotal);
+        formLayout2Col.add(comboBoxCliente);
+        formLayout2Col.add(comboBoxMecanico);
+        formLayout2Col.add(comboBoxVeiculo);
+        formLayout2Col.add(comboBoxPecas);
+        formLayout2Col.add(comboBoxServicos);
         layoutColumn2.add(layoutRow);
-        layoutRow.add(buttonPrimary);
-        layoutRow.add(buttonPrimary2);
-        layoutRow.add(buttonPrimary3);
-        getContent().add(buttonSecondary);
+        layoutRow.add(buttonPrimarySalvar);
+        layoutRow.add(buttonPrimaryAlterar);
+        layoutRow.add(buttonPrimaryExcluir);
+        getContent().add(buttonSecondaryPesquisar);
+
+        gridConsultaOS.addItemDoubleClickListener(event -> {
+            OS osSelecionada = event.getItem();
+            if (osSelecionada != null) {
+                textFieldID.setValue(String.valueOf(osSelecionada.getId()));
+                textFieldNumeroOS.setValue(osSelecionada.getNumero_os());
+                dateTimeAberturaOS.setValue(osSelecionada.getData_abertura_os());
+                dateTimePickerEncerramentoOS.setValue(osSelecionada.getData_encerramento_os());
+                textFieldValorTotal.setValue(String.valueOf(osSelecionada.getValor_total()));
+                comboBoxMecanico.setValue(osSelecionada.getMecanico());
+                comboBoxCliente.setValue(osSelecionada.getCliente());
+                comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
+                comboBoxPecas.setValue(osSelecionada.getPeca());
+                comboBoxServicos.setValue(osSelecionada.getServico());
+
+                tabs.setSelectedTab(tabGerenciar); // Alterna para a aba "Gerenciar OS"
+                Notification.show("Ordem de Serviço Selecionada.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            }
+        });
+    }
+
+    private void atualizarGridConsulta() {
+        List<OS> listaOs = osController.buscarTodasOS();
+        gridConsultaOS.setItems(listaOs);
+        gridConsultaOS.removeAllColumns();
+        gridConsultaOS.addColumn(OS::getId).setHeader("ID");
+        gridConsultaOS.addColumn(OS::getNumero_os).setHeader("Numero OS");
+        gridConsultaOS.addColumn(OS::getData_abertura_os).setHeader("Data Abertura");
+        gridConsultaOS.addColumn(OS::getData_encerramento_os).setHeader("Data Encerramento");
+        gridConsultaOS.addColumn(OS::getValor_total).setHeader("Valor Total");
+        gridConsultaOS.addColumn(OS -> OS.getMecanico().getNome()).setHeader("Mecanico");
+        gridConsultaOS.addColumn(OS -> OS.getCliente().getNome()).setHeader("Cliente");
+        gridConsultaOS.addColumn(OS -> OS.getVeiculo().getDescricao_veiculo()).setHeader("Veículo");
+        gridConsultaOS.addColumn(OS -> OS.getPeca().getDescricao()).setHeader("Peça");
+        gridConsultaOS.addColumn(OS -> OS.getServico().getDescricao_servico()).setHeader("Serviço");
+
     }
 
     record SampleItem(String value, String label, Boolean disabled) {
     }
 
-    private void setComboBoxSampleData(ComboBox comboBox) {
-        List<SampleItem> sampleItems = new ArrayList<>();
-        sampleItems.add(new SampleItem("first", "First", null));
-        sampleItems.add(new SampleItem("second", "Second", null));
-        sampleItems.add(new SampleItem("third", "Third", Boolean.TRUE));
-        sampleItems.add(new SampleItem("fourth", "Fourth", null));
-        comboBox.setItems(sampleItems);
-        comboBox.setItemLabelGenerator(item -> ((SampleItem) item).label());
+    private void setComboBoxClientes(ComboBox<Cliente> comboBox) {
+        List<Cliente> clientes = clienteController.buscarTodosClientes();
+        comboBox.setItems(clientes);
+        comboBox.setItemLabelGenerator(Cliente::getNome);
     }
 
-    private void setMultiSelectComboBoxSampleData(MultiSelectComboBox comboBox) { // Método adicionado
-        List<SampleItem> sampleItems = new ArrayList<>();
-        sampleItems.add(new SampleItem("first", "First", null));
-        sampleItems.add(new SampleItem("second", "Second", null));
-        sampleItems.add(new SampleItem("third", "Third", Boolean.TRUE));
-        sampleItems.add(new SampleItem("fourth", "Fourth", null));
-        comboBox.setItems(sampleItems);
-        comboBox.setItemLabelGenerator(item -> ((SampleItem) item).label());
+    private void setComboBoxMecanicos(ComboBox<Mecanico> comboBox) {
+        List<Mecanico> mecanicos = mecanicoController.buscarTodosMecanicos();
+        comboBox.setItems(mecanicos);
+        comboBox.setItemLabelGenerator(Mecanico::getNome);
     }
+
+    private void setComboBoxVeiculos(ComboBox<Veiculo> comboBox) {
+        List<Veiculo> veiculos = veiculoController.buscarTodosVeiculos();
+        comboBox.setItems(veiculos);
+        comboBox.setItemLabelGenerator(Veiculo::getDescricao_veiculo);
+    }
+
+    private void setMultiSelectComboBoxPecas(MultiSelectComboBox<Peca> comboBoxPecas) {
+        List<Peca> pecas = pecaController.listarTodasPecas();
+        comboBoxPecas.setItems(pecas);
+        comboBoxPecas.setItemLabelGenerator(Peca::getDescricao); // Supondo que Peca tenha um método getDescricao()
+    }
+
+    private void setMultiSelectComboBoxServicos(MultiSelectComboBox<Servico> comboBoxServico) {
+        List<Servico> servicos = servicoController.buscarTodosServicos();
+        comboBoxServico.setItems(servicos);
+        comboBoxServico.setItemLabelGenerator(Servico::getDescricao_servico);
+    }
+
+    private void calcularValorTotal() {
+        BigDecimal valorTotal = BigDecimal.ZERO;
+
+        // Somando o valor das peças selecionadas
+        for (Peca peca : comboBoxPecas.getValue()) {
+            valorTotal = valorTotal.add(peca.getPreco()); // Supondo que Peca tenha o método getValor()
+        }
+
+        // Somando o valor dos serviços selecionados
+        for (Servico servico : comboBoxServicos.getValue()) {
+            valorTotal = valorTotal.add(servico.getValor_servico()); // Supondo que Servico tenha o método getValor()
+        }
+
+        // Atualizando o campo textFieldValorTotal
+        textFieldValorTotal.setValue(valorTotal.toString());
+    }
+
 }

@@ -31,4 +31,9 @@ public class Servico {
         this.valor_servico = valor_servico;
     }
 
+    public int getQuantidade() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getQuantidade'");
+    }
+
 }

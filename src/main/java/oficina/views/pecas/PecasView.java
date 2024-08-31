@@ -131,17 +131,6 @@ public class PecasView extends Composite<VerticalLayout> {
         comboBox.setItemLabelGenerator(Marca::getNome_marca);
     }
 
-    /*
-     * private void atualizarGridConsulta() {
-     * List<Peca> pecas = pecaController.listarTodasPecas();
-     * if (pecas != null && !pecas.isEmpty()) {
-     * gridConsulta.setItems(pecas);
-     * } else {
-     * gridConsulta.setItems(Collections.emptyList());
-     * }
-     * }
-     */
-
     private void atualizarGridConsulta() {
         List<Peca> pecas = pecaController.listarTodasPecas();
         gridConsulta.setItems(pecas);
@@ -391,29 +380,29 @@ public class PecasView extends Composite<VerticalLayout> {
     private void mostrarPecasPorNome(String nome) {
         // Buscar peças pelo nome usando o pecaController
         List<Peca> pecasEncontradas = pecaController.buscarPecaPorNome(nome);
-    
+
         if (pecasEncontradas != null && !pecasEncontradas.isEmpty()) {
             // Criar um diálogo para mostrar os resultados
             Dialog resultadoDialog = new Dialog();
             resultadoDialog.setWidth("600px");
-    
+
             // Criar um Grid para exibir os detalhes das peças encontradas
             Grid<Peca> gridPecas = new Grid<>(Peca.class, false);
             gridPecas.addColumn(Peca::getId).setHeader("ID").setFlexGrow(0);
             gridPecas.addColumn(Peca::getDescricao).setHeader("Descrição");
             gridPecas.addColumn(peca -> String.format("%.2f", peca.getPreco())).setHeader("Preço");
             gridPecas.addColumn(peca -> peca.getMarca().getNome_marca()).setHeader("Marca");
-    
+
             // Preencher o Grid com as peças encontradas
             gridPecas.setItems(pecasEncontradas);
-    
+
             // Adicionar o Grid ao diálogo
             resultadoDialog.add(gridPecas);
-    
+
             // Botão de fechar o diálogo
             Button fecharButton = new Button("Fechar", event -> resultadoDialog.close());
             resultadoDialog.add(new HorizontalLayout(fecharButton));
-    
+
             // Abrir o diálogo
             resultadoDialog.open();
         } else {
@@ -421,6 +410,5 @@ public class PecasView extends Composite<VerticalLayout> {
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }
-    
 
 }

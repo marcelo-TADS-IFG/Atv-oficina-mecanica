@@ -1,7 +1,6 @@
 package oficina.views.mecanico;
 
 import oficina.controllers.MecanicoController;
-import oficina.models.Cliente;
 import oficina.models.Mecanico;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
