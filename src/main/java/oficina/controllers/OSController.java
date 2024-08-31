@@ -18,7 +18,7 @@ public class OSController {
     }
 
     public boolean atualizarOS(OS os) {
-        return osDAO.alterar(os);
+        return osDAO.alterarOS(os);
     }
 
     public boolean deletarOS(int id) {

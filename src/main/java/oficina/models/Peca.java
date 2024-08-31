@@ -7,6 +7,7 @@ public class Peca {
     private String descricao;
     private BigDecimal preco;
     private Marca marca;
+    private int quantidade;
 
     public int getId() {
         return id;
@@ -41,8 +42,11 @@ public class Peca {
     }
 
     public int getQuantidade() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getQuantidade'");
+        return quantidade;
+    }
+
+    public void setQuantidade(int quantidade) {
+        this.quantidade = quantidade;
     }
 
 }

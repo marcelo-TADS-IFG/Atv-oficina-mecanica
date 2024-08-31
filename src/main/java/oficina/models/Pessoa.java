@@ -8,6 +8,15 @@ public abstract class Pessoa {
     private String cidade;
     private String telefone;
 
+    public Pessoa(int id, String nome, String endereco, String cpf, String cidade, String telefone) {
+        this.id = id;
+        this.nome = nome;
+        this.endereco = endereco;
+        this.cpf = cpf;
+        this.cidade = cidade;
+        this.telefone = telefone;
+    }
+
     public int getId() {
         return id;
     }

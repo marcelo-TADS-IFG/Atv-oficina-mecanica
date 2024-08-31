@@ -3,11 +3,14 @@ package oficina.views.ordemdeserviço;
 import oficina.models.OS;
 import oficina.controllers.OSController;
 
+import oficina.models.Veiculo;
+
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox; // Importação adicionada
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
@@ -26,15 +29,17 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility.Gap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.checkerframework.checker.units.qual.m;
 
 import oficina.views.MainLayout;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import oficina.controllers.ClienteController;
 import oficina.models.Cliente;
-import oficina.models.Marca;
 import oficina.controllers.MecanicoController;
 import oficina.models.Mecanico;
 import oficina.controllers.VeiculoController;
@@ -140,7 +145,7 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         setComboBoxVeiculos(comboBoxVeiculo);
         comboBoxPecas.setLabel("Peças");
         comboBoxPecas.setWidth("min-content");
-        setMultiSelectComboBoxPecas(comboBoxPecas); // Método atualizado
+        setMultiSelectComboBoxPecas(comboBoxPecas);
         comboBoxServicos.setLabel("Serviços");
         comboBoxServicos.setWidth("min-content");
         setMultiSelectComboBoxServicos(comboBoxServicos);
@@ -175,7 +180,8 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         layoutRow.add(buttonPrimarySalvar);
         layoutRow.add(buttonPrimaryAlterar);
         layoutRow.add(buttonPrimaryExcluir);
-        getContent().add(buttonSecondaryPesquisar);
+        layoutRow.add(buttonSecondaryPesquisar);
+        // getContent().add();
 
         gridConsultaOS.addItemDoubleClickListener(event -> {
             OS osSelecionada = event.getItem();
@@ -188,14 +194,155 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 comboBoxMecanico.setValue(osSelecionada.getMecanico());
                 comboBoxCliente.setValue(osSelecionada.getCliente());
                 comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
-                comboBoxPecas.setValue(osSelecionada.getPeca());
-                comboBoxServicos.setValue(osSelecionada.getServico());
+
+                // Setar múltiplas peças selecionadas
+                if (osSelecionada.getPecas() != null) {
+                    comboBoxPecas.setValue(osSelecionada.getPecas());
+                }
+
+                // Setar múltiplos serviços selecionados
+                if (osSelecionada.getServicos() != null) {
+                    comboBoxServicos.setValue(osSelecionada.getServicos());
+                }
 
                 tabs.setSelectedTab(tabGerenciar); // Alterna para a aba "Gerenciar OS"
                 Notification.show("Ordem de Serviço Selecionada.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             }
         });
+
+        buttonPrimarySalvar.addClickListener(event -> {
+            try {
+                // Cria uma nova instância de OS e define os atributos principais
+                OS novaOS = new OS();
+                novaOS.setNumero_os(textFieldNumeroOS.getValue());
+                novaOS.setData_abertura_os(dateTimeAberturaOS.getValue());
+                novaOS.setData_encerramento_os(dateTimePickerEncerramentoOS.getValue());
+                novaOS.setValor_total(new BigDecimal(textFieldValorTotal.getValue()));
+                novaOS.setMecanico(comboBoxMecanico.getValue());
+                novaOS.setCliente(comboBoxCliente.getValue());
+                novaOS.setVeiculo(comboBoxVeiculo.getValue());
+
+                // Define a lista de peças e serviços selecionados
+                novaOS.setPecas(comboBoxPecas.getSelectedItems().stream().collect(Collectors.toList()));
+                novaOS.setServicos(comboBoxServicos.getSelectedItems().stream().collect(Collectors.toList()));
+
+                // Chama o método do controller para salvar a nova ordem de serviço
+                boolean sucesso = osController.adicionarOS(novaOS);
+
+                if (sucesso) {
+                    Notification.show("Ordem de Serviço salva com sucesso.", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+                    // Limpa os campos do formulário após salvar
+                    textFieldNumeroOS.clear();
+                    dateTimeAberturaOS.clear();
+                    dateTimePickerEncerramentoOS.clear();
+                    textFieldValorTotal.clear();
+                    comboBoxMecanico.clear();
+                    comboBoxCliente.clear();
+                    comboBoxVeiculo.clear();
+                    comboBoxPecas.clear();
+                    comboBoxServicos.clear();
+
+                    // Atualiza o grid de consulta para refletir as novas informações
+                    atualizarGridConsulta();
+                } else {
+                    Notification.show("Erro ao salvar a Ordem de Serviço.", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
+            } catch (Exception e) {
+                Notification.show("Erro inesperado ao salvar a Ordem de Serviço.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+
+        buttonPrimaryAlterar.addClickListener(event -> {
+            String numeroOS = textFieldNumeroOS.getValue().trim();
+            String valorTotalStr = textFieldValorTotal.getValue().trim();
+            LocalDateTime dataAbertura = dateTimeAberturaOS.getValue();
+            LocalDateTime dataEncerramento = dateTimePickerEncerramentoOS.getValue();
+            Mecanico mecanico = comboBoxMecanico.getValue();
+            Cliente cliente = comboBoxCliente.getValue();
+            Veiculo veiculo = comboBoxVeiculo.getValue();
+
+            // Obtendo as listas de peças e serviços selecionados
+            List<Peca> pecasSelecionadas = new ArrayList<>(comboBoxPecas.getSelectedItems());
+            List<Servico> servicosSelecionados = new ArrayList<>(comboBoxServicos.getSelectedItems());
+
+            if (!numeroOS.isEmpty() && valorTotalStr != null && mecanico != null && cliente != null
+                    && veiculo != null) {
+                try {
+                    BigDecimal valorTotal = new BigDecimal(valorTotalStr);
+
+                    ConfirmDialog dialog = new ConfirmDialog(
+                            "Confirmar Alteração",
+                            "Tem certeza que deseja alterar a ordem de serviço?",
+                            "Confirmar",
+                            eventConfirm -> {
+                                try {
+                                    OS osSelecionada = new OS();
+                                    osSelecionada.setNumero_os(numeroOS);
+                                    osSelecionada.setData_abertura_os(dataAbertura);
+                                    osSelecionada.setData_encerramento_os(dataEncerramento);
+                                    osSelecionada.setValor_total(valorTotal);
+                                    osSelecionada.setMecanico(mecanico);
+                                    osSelecionada.setCliente(cliente);
+                                    osSelecionada.setVeiculo(veiculo);
+
+                                    // Define a lista de peças e serviços selecionados
+                                    osSelecionada.setPecas(pecasSelecionadas);
+                                    osSelecionada.setServicos(servicosSelecionados);
+
+                                    // Chama o método do controller para alterar a ordem de serviço
+                                    boolean sucesso = osController.atualizarOS(osSelecionada);
+
+                                    if (sucesso) {
+                                        Notification
+                                                .show("Ordem de Serviço alterada com sucesso.", 3000,
+                                                        Notification.Position.MIDDLE)
+                                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                                        textFieldNumeroOS.clear();
+                                        dateTimeAberturaOS.clear();
+                                        dateTimePickerEncerramentoOS.clear();
+                                        textFieldValorTotal.clear();
+                                        comboBoxMecanico.clear();
+                                        comboBoxCliente.clear();
+                                        comboBoxVeiculo.clear();
+                                        comboBoxPecas.clear();
+                                        comboBoxServicos.clear();
+                                        textFieldNumeroOS.focus();
+                                        atualizarGridConsulta();
+                                    } else {
+                                        Notification
+                                                .show("Erro ao alterar a Ordem de Serviço.", 3000,
+                                                        Notification.Position.MIDDLE)
+                                                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                                    }
+                                } catch (Exception e) {
+                                    Notification
+                                            .show("Erro inesperado ao alterar a Ordem de Serviço.", 3000,
+                                                    Notification.Position.MIDDLE)
+                                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                                }
+                            },
+                            "Cancelar",
+                            eventCancel -> {
+                                Notification.show("Alteração cancelada.", 3000, Notification.Position.MIDDLE)
+                                        .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                            });
+
+                    dialog.open();
+                } catch (NumberFormatException e) {
+                    Notification.show("Valor total deve ser um número válido.", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
+            } else {
+                Notification.show("Preencha todos os campos corretamente.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+
     }
 
     private void atualizarGridConsulta() {
@@ -210,9 +357,18 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         gridConsultaOS.addColumn(OS -> OS.getMecanico().getNome()).setHeader("Mecanico");
         gridConsultaOS.addColumn(OS -> OS.getCliente().getNome()).setHeader("Cliente");
         gridConsultaOS.addColumn(OS -> OS.getVeiculo().getDescricao_veiculo()).setHeader("Veículo");
-        gridConsultaOS.addColumn(OS -> OS.getPeca().getDescricao()).setHeader("Peça");
-        gridConsultaOS.addColumn(OS -> OS.getServico().getDescricao_servico()).setHeader("Serviço");
 
+        // Exibindo a lista de peças
+        gridConsultaOS.addColumn(OS -> OS.getPecas().stream()
+                .map(Peca::getDescricao)
+                .collect(Collectors.joining(", ")))
+                .setHeader("Peças");
+
+        // Exibindo a lista de serviços
+        gridConsultaOS.addColumn(OS -> OS.getServicos().stream()
+                .map(Servico::getDescricao_servico)
+                .collect(Collectors.joining(", ")))
+                .setHeader("Serviços");
     }
 
     record SampleItem(String value, String label, Boolean disabled) {

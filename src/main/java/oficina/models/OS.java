@@ -2,6 +2,9 @@ package oficina.models;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+
+//import org.hibernate.mapping.List;
 
 public class OS {
     private int id;
@@ -12,8 +15,8 @@ public class OS {
     private Mecanico mecanico;
     private Cliente cliente;
     private Veiculo veiculo;
-    private Peca peca;
-    private Servico servico;
+    private List<Peca> pecas; // Alterado para uma lista de Peca
+    private List<Servico> servicos;
 
     public int getId() {
         return id;
@@ -79,30 +82,20 @@ public class OS {
         this.veiculo = veiculo;
     }
 
-    public Peca getPeca() {
-        return peca;
+    public List<Peca> getPecas() {
+        return pecas;
     }
 
-    public void setPeca(Peca peca) {
-        this.peca = peca;
+    public void setPecas(List<Peca> pecas) {
+        this.pecas = pecas;
     }
 
-    public Servico getServico() {
-        return servico;
+    public List<Servico> getServicos() {
+        return servicos;
     }
 
-    public void setServico(Servico servico) {
-        this.servico = servico;
-    }
-
-    public Object getPecas() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPecas'");
-    }
-
-    public Object getServicos() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getServicos'");
+    public void setServicos(List<Servico> servicos) {
+        this.servicos = servicos;
     }
 
 }

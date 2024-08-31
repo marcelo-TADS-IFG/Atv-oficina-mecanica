@@ -182,7 +182,7 @@ public class PecasView extends Composite<VerticalLayout> {
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         } catch (Exception e) {
-            Notification.show("Erro inesperado ao salvar a peça.", 3000, Notification.Position.MIDDLE)
+            Notification.show("Todos os campos devem ser preenchidos corretamente.", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }

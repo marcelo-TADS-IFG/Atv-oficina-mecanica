@@ -143,7 +143,7 @@ public class MecanicoView extends Composite<VerticalLayout> {
 
                 // Adicionar o cliente usando o controlador
                 if (mecanicoController.adicionarMecanico(mecanico)) {
-                    Notification.show("Cliente salvo com sucesso.", 3000, Notification.Position.MIDDLE)
+                    Notification.show("Mecânico salvo com sucesso.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     // Limpar os campos
                     textFieldID.clear();
@@ -154,7 +154,7 @@ public class MecanicoView extends Composite<VerticalLayout> {
                     textFieldTelefone.clear();
                     textFieldID.focus();
                 } else {
-                    Notification.show("Erro ao salvar o cliente.", 3000, Notification.Position.MIDDLE)
+                    Notification.show("Erro ao salvar o mecânico.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 }
             } else {
@@ -165,7 +165,7 @@ public class MecanicoView extends Composite<VerticalLayout> {
             Notification.show("ID deve ser um número válido.", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         } catch (Exception e) {
-            Notification.show("Erro inesperado ao salvar o cliente.", 3000, Notification.Position.MIDDLE)
+            Notification.show("Erro inesperado ao salvar o mecânico.", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }

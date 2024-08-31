@@ -6,6 +6,7 @@ public class Servico {
     private int id;
     private String descricao_servico;
     private BigDecimal valor_servico;
+    private int quantidade;
 
     public int getId() {
         return id;
@@ -32,8 +33,11 @@ public class Servico {
     }
 
     public int getQuantidade() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getQuantidade'");
+        return quantidade;
+    }
+
+    public void setQuantidade(int quantidade) {
+        this.quantidade = quantidade;
     }
 
 }
