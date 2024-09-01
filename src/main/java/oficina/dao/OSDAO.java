@@ -14,9 +14,6 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 
 import oficina.models.OS;
-import oficina.models.Mecanico;
-import oficina.models.Cliente;
-import oficina.models.Veiculo;
 import oficina.models.Peca;
 import oficina.models.Servico;
 
@@ -63,13 +60,11 @@ public class OSDAO {
 
                     // Inserir na tabela 'os_peca'
                     if (os.getPecas() != null) {
-                        String insertOSPeca = "INSERT INTO os_peca (id_os, id_peca, quantidade) VALUES (?, ?, ?)";
+                        String insertOSPeca = "INSERT INTO os_peca (id_os, id_peca) VALUES (?, ?)";
                         preparedStatement = connection.prepareStatement(insertOSPeca);
                         for (Peca peca : os.getPecas()) {
                             preparedStatement.setInt(1, idOS);
                             preparedStatement.setInt(2, peca.getId());
-                            preparedStatement.setInt(3, peca.getQuantidade()); // Assumindo que 'Peca' tem um método
-                                                                               // 'getQuantidade()'
                             preparedStatement.addBatch();
                         }
                         preparedStatement.executeBatch();
@@ -77,13 +72,11 @@ public class OSDAO {
 
                     // Inserir na tabela 'os_servico'
                     if (os.getServicos() != null) {
-                        String insertOSServico = "INSERT INTO os_servico (id_os, id_servico, quantidade) VALUES (?, ?, ?)";
+                        String insertOSServico = "INSERT INTO os_servico (id_os, id_servico) VALUES (?, ?)";
                         preparedStatement = connection.prepareStatement(insertOSServico);
                         for (Servico servico : os.getServicos()) {
                             preparedStatement.setInt(1, idOS);
                             preparedStatement.setInt(2, servico.getId());
-                            preparedStatement.setInt(3, servico.getQuantidade()); // Assumindo que 'Servico' tem um
-                                                                                  // método 'getQuantidade()'
                             preparedStatement.addBatch();
                         }
                         preparedStatement.executeBatch();
@@ -134,7 +127,7 @@ public class OSDAO {
         try {
             connection = DBConnection.getInstance().getConnection();
             connection.setAutoCommit(false); // Iniciar transação
-    
+
             // Atualizar na tabela 'os'
             String updateOS = "UPDATE os SET numero_os = ?, data_abertura_os = ?, data_encerramento_os = ?, valor_total = ?, id_mecanico = ?, id_cliente = ?, id_veiculo = ? WHERE id = ?";
             preparedStatement = connection.prepareStatement(updateOS);
@@ -147,45 +140,43 @@ public class OSDAO {
             preparedStatement.setInt(7, os.getVeiculo().getId());
             preparedStatement.setInt(8, os.getId());
             int resultado = preparedStatement.executeUpdate();
-    
+
             if (resultado > 0) {
                 // Excluir entradas antigas nas tabelas 'os_peca' e 'os_servico'
                 String deleteOSPeca = "DELETE FROM os_peca WHERE id_os = ?";
                 preparedStatement = connection.prepareStatement(deleteOSPeca);
                 preparedStatement.setInt(1, os.getId());
                 preparedStatement.executeUpdate();
-    
+
                 String deleteOSServico = "DELETE FROM os_servico WHERE id_os = ?";
                 preparedStatement = connection.prepareStatement(deleteOSServico);
                 preparedStatement.setInt(1, os.getId());
                 preparedStatement.executeUpdate();
-    
+
                 // Inserir novas entradas na tabela 'os_peca'
-                if (os.getPecas() != null) {
-                    String insertOSPeca = "INSERT INTO os_peca (id_os, id_peca, quantidade) VALUES (?, ?, ?)";
+                if (os.getPecas() != null && !os.getPecas().isEmpty()) {
+                    String insertOSPeca = "INSERT INTO os_peca (id_os, id_peca) VALUES (?, ?)";
                     preparedStatement = connection.prepareStatement(insertOSPeca);
                     for (Peca peca : os.getPecas()) {
                         preparedStatement.setInt(1, os.getId());
                         preparedStatement.setInt(2, peca.getId());
-                        preparedStatement.setInt(3, peca.getQuantidade()); // Assumindo que 'Peca' tem um método 'getQuantidade()'
                         preparedStatement.addBatch();
                     }
                     preparedStatement.executeBatch();
                 }
-    
+
                 // Inserir novas entradas na tabela 'os_servico'
-                if (os.getServicos() != null) {
-                    String insertOSServico = "INSERT INTO os_servico (id_os, id_servico, quantidade) VALUES (?, ?, ?)";
+                if (os.getServicos() != null && !os.getServicos().isEmpty()) {
+                    String insertOSServico = "INSERT INTO os_servico (id_os, id_servico) VALUES (?, ?)";
                     preparedStatement = connection.prepareStatement(insertOSServico);
                     for (Servico servico : os.getServicos()) {
                         preparedStatement.setInt(1, os.getId());
                         preparedStatement.setInt(2, servico.getId());
-                        preparedStatement.setInt(3, servico.getQuantidade()); // Assumindo que 'Servico' tem um método 'getQuantidade()'
                         preparedStatement.addBatch();
                     }
                     preparedStatement.executeBatch();
                 }
-    
+
                 connection.commit(); // Confirmar transação
                 logger.log(Level.INFO, "Ordem de serviço alterada com sucesso: {0}", os.getNumero_os());
                 return true;
@@ -219,7 +210,6 @@ public class OSDAO {
             }
         }
     }
-    
 
     public boolean deletar(int idOS) {
         try {
@@ -280,13 +270,14 @@ public class OSDAO {
         List<OS> lista = new ArrayList<>();
         try {
             Connection connection = DBConnection.getInstance().getConnection();
-            // Consulta SQL com junção para obter peças e serviços
-            String select = "SELECT os.*, os_peca.id_peca, os_peca.quantidade AS quantidade_peca, " +
-                    "os_servico.id_servico, os_servico.quantidade AS quantidade_servico " +
+            // Criar o PreparedStatement com ResultSet que permite rolagem
+            String select = "SELECT os.*, os_peca.id_peca, " +
+                    "os_servico.id_servico " +
                     "FROM os " +
                     "LEFT JOIN os_peca ON os.id = os_peca.id_os " +
                     "LEFT JOIN os_servico ON os.id = os_servico.id_os";
-            PreparedStatement preparedStatement = connection.prepareStatement(select);
+            PreparedStatement preparedStatement = connection.prepareStatement(select, ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_READ_ONLY);
             ResultSet resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
@@ -306,7 +297,13 @@ public class OSDAO {
                 List<Peca> pecas = new ArrayList<>();
                 List<Servico> servicos = new ArrayList<>();
 
+                int currentOSId = resultSet.getInt("id");
                 do {
+                    if (resultSet.getInt("id") != currentOSId) {
+                        resultSet.previous(); // Retorna ao registro anterior para não pular a próxima OS
+                        break;
+                    }
+
                     int idPeca = resultSet.getInt("id_peca");
                     if (!resultSet.wasNull()) {
                         Peca peca = pecaController.buscarPecaPorId(idPeca);

@@ -6,7 +6,7 @@ public class Servico {
     private int id;
     private String descricao_servico;
     private BigDecimal valor_servico;
-    private int quantidade;
+    //private int quantidade;
 
     public int getId() {
         return id;
@@ -32,12 +32,12 @@ public class Servico {
         this.valor_servico = valor_servico;
     }
 
-    public int getQuantidade() {
+    /*public int getQuantidade() {
         return quantidade;
     }
 
     public void setQuantidade(int quantidade) {
         this.quantidade = quantidade;
-    }
+    }*/
 
 }

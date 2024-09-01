@@ -14,7 +14,6 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 
 import oficina.models.Veiculo;
 import oficina.models.Cliente;
-import oficina.dao.ClienteDAO;
 import oficina.controllers.ClienteController;
 
 public class VeiculoDAO {

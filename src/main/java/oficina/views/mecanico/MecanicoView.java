@@ -269,7 +269,6 @@ public class MecanicoView extends Composite<VerticalLayout> {
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }
-    
 
     private void pesquisarMecanico(TextField textFieldID, TextField textFieldNome, TextField textFieldEndereco,
             EmailField emailFieldCpf, TextField textFieldCidade, TextField textFieldTelefone) {
