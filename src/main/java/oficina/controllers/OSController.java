@@ -29,11 +29,9 @@ public class OSController {
         return osDAO.buscarOS(id);
     }
 
-    /*
-     * public List<OS> buscarOSPorNumero(String numero_os) {
-     * return osDAO.buscarOS(numero_os);
-     * }
-     */
+    public OS buscarOSPorNumero(String numero_os) {
+        return osDAO.buscarOSPorNumero(numero_os);
+    }
 
     public List<OS> buscarTodasOS() {
         return osDAO.buscarTodas();

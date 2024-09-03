@@ -185,6 +185,10 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         layoutRow.add(buttonSecondaryPesquisar);
         // getContent().add();
 
+        buttonSecondaryPesquisar.addClickListener(
+                event -> pesquisarOS(textFieldID, textFieldNumeroOS, dateTimeAberturaOS, dateTimePickerEncerramentoOS,
+                        textFieldValorTotal, comboBoxMecanico, comboBoxCliente, comboBoxVeiculo));
+
         gridConsultaOS.addItemDoubleClickListener(event -> {
             OS osSelecionada = event.getItem();
             if (osSelecionada != null) {
@@ -419,10 +423,10 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
 
     }
 
-    /*private void pesquisarOS(TextField textFieldNumeroOS, TextField textFieldDataAbertura,
-            TextField textFieldDataEncerramento,
-            TextField textFieldValorTotal, ComboBox<Mecanico> comboBoxMecanico,
-            ComboBox<Cliente> comboBoxCliente, ComboBox<Veiculo> comboBoxVeiculo) {
+    private void pesquisarOS(TextField textFieldNumeroOS, TextField textFieldNumeroOS2, DateTimePicker dateTimePickerDataAbertura,
+            DateTimePicker dateTimePickerDataEncerramento, TextField textFieldValorTotal,
+            ComboBox<Mecanico> comboBoxMecanico, ComboBox<Cliente> comboBoxCliente,
+            ComboBox<Veiculo> comboBoxVeiculo) {
         String numeroOSText = textFieldNumeroOS.getValue();
 
         if (!numeroOSText.isEmpty()) {
@@ -431,9 +435,13 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 OS os = osController.buscarOSPorNumero(numeroOSText);
 
                 if (os != null) {
+                    // Usar diretamente as datas como LocalDateTime se já estiverem nesse formato
+                    LocalDateTime dataAbertura = os.getData_abertura_os();
+                    LocalDateTime dataEncerramento = os.getData_encerramento_os();
+
                     // Preencher os campos com os dados da OS encontrada
-                    textFieldDataAbertura.setValue(os.getData_abertura_os().toString());
-                    textFieldDataEncerramento.setValue(os.getData_encerramento_os().toString());
+                    dateTimePickerDataAbertura.setValue(dataAbertura);
+                    dateTimePickerDataEncerramento.setValue(dataEncerramento);
                     textFieldValorTotal.setValue(os.getValor_total().toString());
                     comboBoxMecanico.setValue(os.getMecanico());
                     comboBoxCliente.setValue(os.getCliente());
@@ -441,10 +449,10 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
 
                     Notification.show("Ordem de Serviço encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    textFieldDataAbertura.focus();
+                    dateTimePickerDataAbertura.focus();
                 } else {
                     // Limpar os campos caso a OS não seja encontrada
-                    limparCamposOS(textFieldDataAbertura, textFieldDataEncerramento, textFieldValorTotal,
+                    limparCamposOS(dateTimePickerDataAbertura, dateTimePickerDataEncerramento, textFieldValorTotal,
                             comboBoxMecanico, comboBoxCliente, comboBoxVeiculo);
                     textFieldNumeroOS.focus();
                     Notification.show("Ordem de Serviço não encontrada.", 3000, Notification.Position.MIDDLE)
@@ -455,24 +463,25 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         } else {
-            abrirDialogoDePesquisaOS(textFieldNumeroOS, textFieldDataAbertura, textFieldDataEncerramento,
+            abrirDialogoDePesquisaOS(textFieldNumeroOS, dateTimePickerDataAbertura, dateTimePickerDataEncerramento,
                     textFieldValorTotal, comboBoxMecanico, comboBoxCliente, comboBoxVeiculo);
         }
     }
 
-    private void limparCamposOS(TextField textFieldDataAbertura, TextField textFieldDataEncerramento,
+    private void limparCamposOS(DateTimePicker dateTimePickerDataAbertura,
+            DateTimePicker dateTimePickerDataEncerramento,
             TextField textFieldValorTotal, ComboBox<Mecanico> comboBoxMecanico,
             ComboBox<Cliente> comboBoxCliente, ComboBox<Veiculo> comboBoxVeiculo) {
-        textFieldDataAbertura.clear();
-        textFieldDataEncerramento.clear();
+        dateTimePickerDataAbertura.setValue(null);
+        dateTimePickerDataEncerramento.setValue(null);
         textFieldValorTotal.clear();
         comboBoxMecanico.clear();
         comboBoxCliente.clear();
         comboBoxVeiculo.clear();
     }
 
-    private void abrirDialogoDePesquisaOS(TextField textFieldNumeroOS, TextField textFieldDataAbertura,
-            TextField textFieldDataEncerramento, TextField textFieldValorTotal,
+    private void abrirDialogoDePesquisaOS(TextField textFieldNumeroOS, DateTimePicker dateTimePickerDataAbertura,
+            DateTimePicker dateTimePickerDataEncerramento, TextField textFieldValorTotal,
             ComboBox<Mecanico> comboBoxMecanico, ComboBox<Cliente> comboBoxCliente,
             ComboBox<Veiculo> comboBoxVeiculo) {
         // Criar a caixa de diálogo para a pesquisa
@@ -487,7 +496,7 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         // Configura o comboBox para atualizar a lista conforme o usuário digita
         comboBox.addCustomValueSetListener(event -> {
             String numeroOS = event.getDetail().toLowerCase(); // Converte para minúsculas para busca case-insensitive
-            List<OS> osFiltradas = osController.buscarOSPorNumero(numeroOS);
+            OS osFiltradas = osController.buscarOSPorNumero(numeroOS);
             comboBox.setItems(osFiltradas);
         });
 
@@ -496,8 +505,8 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
             OS osSelecionada = comboBox.getValue();
             if (osSelecionada != null) {
                 textFieldNumeroOS.setValue(osSelecionada.getNumero_os());
-                textFieldDataAbertura.setValue(osSelecionada.getData_abertura_os().toString());
-                textFieldDataEncerramento.setValue(osSelecionada.getData_encerramento_os().toString());
+                dateTimePickerDataAbertura.setValue(osSelecionada.getData_abertura_os());
+                dateTimePickerDataEncerramento.setValue(osSelecionada.getData_encerramento_os());
                 textFieldValorTotal.setValue(osSelecionada.getValor_total().toString());
                 comboBoxMecanico.setValue(osSelecionada.getMecanico());
                 comboBoxCliente.setValue(osSelecionada.getCliente());
@@ -521,7 +530,7 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         dialog.add(layout);
 
         dialog.open();
-    }*/
+    }
 
     private void atualizarGridConsulta() {
         List<OS> listaOs = osController.buscarTodasOS();
