@@ -1,5 +1,6 @@
 package oficina.views;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.html.Footer;
@@ -74,10 +75,20 @@ public class MainLayout extends AppLayout {
         return layout;
     }
 
-    @Override
+    /*@Override
     protected void afterNavigation() {
         super.afterNavigation();
         viewTitle.setText(getCurrentPageTitle());
+    }*/
+
+    @Override
+    protected void afterNavigation() {
+        super.afterNavigation();
+        if (getCurrentPageTitle().isEmpty()) {
+            UI.getCurrent().navigate(ClienteView.class); // Redireciona para uma página padrão
+        } else {
+            viewTitle.setText(getCurrentPageTitle());
+        }
     }
 
     private String getCurrentPageTitle() {
@@ -85,3 +96,5 @@ public class MainLayout extends AppLayout {
         return title == null ? "" : title.value();
     }
 }
+
+

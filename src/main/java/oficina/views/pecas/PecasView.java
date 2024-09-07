@@ -295,21 +295,20 @@ public class PecasView extends Composite<VerticalLayout> {
             try {
                 int id = Integer.parseInt(idText);
 
-                // Pesquisar a peça pelo ID
                 Peca peca = pecaController.buscarPecaPorId(id);
 
                 if (peca != null) {
-                    // Preencher os campos com os dados da peça encontrada
                     textFieldDescricao.setValue(peca.getDescricao());
-                    textFieldPreco.setValue(String.valueOf(peca.getPreco()));
+                    textFieldPreco.setValue(peca.getPreco().toString());
                     comboBoxMarca.setValue(peca.getMarca());
-
                     Notification.show("Peça encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textFieldDescricao.focus();
                 } else {
-                    // Limpar os campos caso a peça não seja encontrada
-                    limparCampos(textFieldDescricao, textFieldPreco, comboBoxMarca);
+                    // Limpar todos os campos caso a peça não seja encontrada
+                    textFieldDescricao.clear();
+                    textFieldPreco.clear();
+                    comboBoxMarca.clear();
                     textFieldID.focus();
                     Notification.show("Peça não encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -323,57 +322,86 @@ public class PecasView extends Composite<VerticalLayout> {
         }
     }
 
-    private void limparCampos(TextField textFieldDescricao, TextField textFieldPreco, ComboBox<Marca> comboBoxMarca) {
-        textFieldDescricao.clear();
-        textFieldPreco.clear();
-        comboBoxMarca.clear();
-    }
-
     private void abrirDialogoDePesquisaPeca(TextField textFieldID, TextField textFieldDescricao,
-            TextField textFieldPreco,
-            ComboBox<Marca> comboBoxMarca) {
-        // Criar a caixa de diálogo para a pesquisa
+            TextField textFieldPreco, ComboBox<Marca> comboBoxMarca) {
+
         Dialog dialog = new Dialog();
-        dialog.setWidth("400px");
+        dialog.setWidth("800px"); // Ajuste conforme necessário
 
-        // ComboBox para buscar peças pelo nome
-        ComboBox<Peca> comboBox = new ComboBox<>("Buscar Peça");
-        comboBox.setPlaceholder("Digite o nome da peça");
-        comboBox.setItemLabelGenerator(Peca::getDescricao);
+        // Campo de busca
+        TextField searchField = new TextField("Buscar Peça");
+        searchField.setPlaceholder("Digite a descrição da peça");
+        searchField.setWidthFull();
 
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String nomePeca = event.getDetail().toLowerCase(); // Converte para minúsculas para busca case-insensitive
-            List<Peca> pecasFiltradas = pecaController.buscarPecaPorNome(nomePeca);
-            comboBox.setItems(pecasFiltradas);
+        // Grid para exibir as peças
+        Grid<Peca> grid = new Grid<>(Peca.class, false);
+        grid.addColumn(Peca::getId).setHeader("ID").setAutoWidth(true);
+        grid.addColumn(Peca::getDescricao).setHeader("Descrição").setAutoWidth(true);
+        grid.addColumn(peca -> peca.getPreco().toString()).setHeader("Preço").setAutoWidth(true);
+        grid.addColumn(peca -> peca.getMarca() != null ? peca.getMarca().getNome_marca() : "Nenhuma")
+                .setHeader("Marca").setAutoWidth(true);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+
+        // Definir altura do grid manualmente
+        grid.setHeight("400px"); // Ajuste conforme necessário
+
+        // Listener para buscar e exibir as peças conforme o usuário digita
+        searchField.addValueChangeListener(event -> {
+            String descricaoPeca = event.getValue().trim().toLowerCase();
+            if (!descricaoPeca.isEmpty()) {
+                List<Peca> pecasFiltradas = pecaController.buscarPecaPorNome(descricaoPeca);
+                grid.setItems(pecasFiltradas);
+            } else {
+                grid.setItems(); // Limpa o grid se o campo de busca estiver vazio
+            }
         });
 
-        // Botão de confirmar seleção
-        Button confirmarButton = new Button("Confirmar", e -> {
-            Peca pecaSelecionada = comboBox.getValue();
+        // Evento de duplo clique para selecionar uma peça
+        grid.addItemDoubleClickListener(event -> {
+            Peca pecaSelecionada = event.getItem();
             if (pecaSelecionada != null) {
                 textFieldID.setValue(String.valueOf(pecaSelecionada.getId()));
                 textFieldDescricao.setValue(pecaSelecionada.getDescricao());
-                textFieldPreco.setValue(String.valueOf(pecaSelecionada.getPreco()));
+                textFieldPreco.setValue(pecaSelecionada.getPreco().toString());
                 comboBoxMarca.setValue(pecaSelecionada.getMarca());
-
                 Notification.show("Peça selecionada: " + pecaSelecionada.getDescricao(), 3000,
                         Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a seleção
+            }
+        });
+
+        // Botões de ação
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Peca pecaSelecionada = grid.asSingleSelect().getValue();
+            if (pecaSelecionada != null) {
+                textFieldID.setValue(String.valueOf(pecaSelecionada.getId()));
+                textFieldDescricao.setValue(pecaSelecionada.getDescricao());
+                textFieldPreco.setValue(pecaSelecionada.getPreco().toString());
+                comboBoxMarca.setValue(pecaSelecionada.getMarca());
+                Notification.show("Peça selecionada: " + pecaSelecionada.getDescricao(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a confirmação
             } else {
                 Notification.show("Nenhuma peça selecionada.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
-            dialog.close();
         });
 
-        // Botão de cancelar
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
-        // Layout da caixa de diálogo
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
-        dialog.add(layout);
+        HorizontalLayout actions = new HorizontalLayout(confirmarButton, cancelarButton);
 
+        VerticalLayout layout = new VerticalLayout(searchField, grid, actions);
+        layout.setSizeFull();
+        layout.setSpacing(true);
+        layout.setPadding(true);
+
+        // Atribuindo flexGrow para que o Grid ocupe o espaço restante
+        layout.setFlexGrow(1, grid);
+
+        dialog.add(layout);
         dialog.open();
     }
 

@@ -29,6 +29,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility.Gap;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -187,7 +188,8 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
 
         buttonSecondaryPesquisar.addClickListener(
                 event -> pesquisarOS(textFieldID, textFieldNumeroOS, dateTimeAberturaOS, dateTimePickerEncerramentoOS,
-                        textFieldValorTotal, comboBoxMecanico, comboBoxCliente, comboBoxVeiculo));
+                        textFieldValorTotal, comboBoxMecanico, comboBoxCliente, comboBoxVeiculo, comboBoxPecas,
+                        comboBoxServicos));
 
         gridConsultaOS.addItemDoubleClickListener(event -> {
             OS osSelecionada = event.getItem();
@@ -271,7 +273,7 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         });
 
         buttonPrimaryAlterar.addClickListener(event -> {
-            String textFieldIdOS = textFieldID.getValue();
+            String textFieldIdOS = textFieldID.getValue().trim();
             String valorTotalStr = textFieldValorTotal.getValue().trim();
             LocalDateTime dataAbertura = dateTimeAberturaOS.getValue();
             LocalDateTime dataEncerramento = dateTimePickerEncerramentoOS.getValue();
@@ -283,138 +285,197 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
             List<Peca> pecasSelecionadas = new ArrayList<>(comboBoxPecas.getSelectedItems());
             List<Servico> servicosSelecionados = new ArrayList<>(comboBoxServicos.getSelectedItems());
 
-            // Supondo que você tenha um campo ou método para obter o ID da OS
-            int idOS = Integer.parseInt(textFieldIdOS.trim());
+            // Construindo a mensagem de erro
+            StringBuilder mensagemErro = new StringBuilder("Os seguintes campos precisam ser preenchidos:\n");
 
-            if (valorTotalStr != null && mecanico != null && cliente != null && veiculo != null) {
-                try {
-                    BigDecimal valorTotal = new BigDecimal(valorTotalStr);
+            boolean temErro = false;
 
-                    ConfirmDialog dialog = new ConfirmDialog(
-                            "Confirmar Alteração",
-                            "Tem certeza que deseja alterar a ordem de serviço?",
-                            "Confirmar",
-                            eventConfirm -> {
-                                try {
-                                    // Obter a OS existente com base no ID (ou uma outra abordagem para recuperar a
-                                    // OS existente)
-                                    OS osSelecionada = osController.buscarOSPorId(idOS);
+            if (textFieldIdOS.isEmpty()) {
+                mensagemErro.append("- ID da OS\n");
+                temErro = true;
+            }
 
-                                    if (osSelecionada != null) {
-                                        // Manter o numero_os original
-                                        osSelecionada.setData_abertura_os(dataAbertura);
-                                        osSelecionada.setData_encerramento_os(dataEncerramento);
-                                        osSelecionada.setValor_total(valorTotal);
-                                        osSelecionada.setMecanico(mecanico);
-                                        osSelecionada.setCliente(cliente);
-                                        osSelecionada.setVeiculo(veiculo);
-                                        osSelecionada.setPecas(pecasSelecionadas);
-                                        osSelecionada.setServicos(servicosSelecionados);
+            if (valorTotalStr.isEmpty()) {
+                mensagemErro.append("- Valor total\n");
+                temErro = true;
+            }
 
-                                        // Chama o método do controller para alterar a ordem de serviço
-                                        boolean sucesso = osController.atualizarOS(osSelecionada);
+            if (dataAbertura == null) {
+                mensagemErro.append("- Data de abertura\n");
+                temErro = true;
+            }
 
-                                        if (sucesso) {
-                                            Notification.show("Ordem de Serviço alterada com sucesso.", 3000,
-                                                    Notification.Position.MIDDLE)
-                                                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                                            // Limpar campos
-                                            textFieldNumeroOS.clear();
-                                            textFieldID.clear();
-                                            dateTimeAberturaOS.clear();
-                                            dateTimePickerEncerramentoOS.clear();
-                                            textFieldValorTotal.clear();
-                                            comboBoxMecanico.clear();
-                                            comboBoxCliente.clear();
-                                            comboBoxVeiculo.clear();
-                                            comboBoxPecas.clear();
-                                            comboBoxServicos.clear();
-                                            textFieldID.focus();
-                                            atualizarGridConsulta();
-                                        } else {
-                                            Notification.show("Erro ao alterar a Ordem de Serviço.", 3000,
-                                                    Notification.Position.MIDDLE)
-                                                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                                        }
+            if (dataEncerramento == null) {
+                mensagemErro.append("- Data de encerramento\n");
+                temErro = true;
+            }
+
+            if (mecanico == null) {
+                mensagemErro.append("- Mecânico\n");
+                temErro = true;
+            }
+
+            if (cliente == null) {
+                mensagemErro.append("- Cliente\n");
+                temErro = true;
+            }
+
+            if (veiculo == null) {
+                mensagemErro.append("- Veículo\n");
+                temErro = true;
+            }
+
+            if (pecasSelecionadas.isEmpty()) {
+                mensagemErro.append("- Pelo menos uma peça\n");
+                temErro = true;
+            }
+
+            if (servicosSelecionados.isEmpty()) {
+                mensagemErro.append("- Pelo menos um serviço\n");
+                temErro = true;
+            }
+
+            if (temErro) {
+                Notification.show(mensagemErro.toString(), 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+
+            try {
+                BigDecimal valorTotal = new BigDecimal(valorTotalStr);
+
+                ConfirmDialog dialog = new ConfirmDialog(
+                        "Confirmar Alteração",
+                        "Tem certeza que deseja alterar a ordem de serviço?",
+                        "Confirmar",
+                        eventConfirm -> {
+                            try {
+                                // Obter a OS existente com base no ID (ou uma outra abordagem para recuperar a
+                                // OS existente)
+                                int idOS = Integer.parseInt(textFieldIdOS);
+
+                                OS osSelecionada = osController.buscarOSPorId(idOS);
+
+                                if (osSelecionada != null) {
+                                    // Manter o numero_os original
+                                    osSelecionada.setData_abertura_os(dataAbertura);
+                                    osSelecionada.setData_encerramento_os(dataEncerramento);
+                                    osSelecionada.setValor_total(valorTotal);
+                                    osSelecionada.setMecanico(mecanico);
+                                    osSelecionada.setCliente(cliente);
+                                    osSelecionada.setVeiculo(veiculo);
+                                    osSelecionada.setPecas(pecasSelecionadas);
+                                    osSelecionada.setServicos(servicosSelecionados);
+
+                                    // Chama o método do controller para alterar a ordem de serviço
+                                    boolean sucesso = osController.atualizarOS(osSelecionada);
+
+                                    if (sucesso) {
+                                        Notification.show("Ordem de Serviço alterada com sucesso.", 3000,
+                                                Notification.Position.MIDDLE)
+                                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                                        // Limpar campos
+                                        textFieldNumeroOS.clear();
+                                        textFieldID.clear();
+                                        dateTimeAberturaOS.clear();
+                                        dateTimePickerEncerramentoOS.clear();
+                                        textFieldValorTotal.clear();
+                                        comboBoxMecanico.clear();
+                                        comboBoxCliente.clear();
+                                        comboBoxVeiculo.clear();
+                                        comboBoxPecas.clear();
+                                        comboBoxServicos.clear();
+                                        textFieldID.focus();
+                                        atualizarGridConsulta();
                                     } else {
-                                        Notification.show("Ordem de Serviço não encontrada.", 3000,
+                                        Notification.show("Erro ao alterar a Ordem de Serviço.", 3000,
                                                 Notification.Position.MIDDLE)
                                                 .addThemeVariants(NotificationVariant.LUMO_ERROR);
                                     }
-                                } catch (Exception e) {
-                                    Notification.show("Erro inesperado ao alterar a Ordem de Serviço.", 3000,
-                                            Notification.Position.MIDDLE)
-                                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                                }
-                            },
-                            "Cancelar",
-                            eventCancel -> {
-                                Notification.show("Alteração cancelada.", 3000, Notification.Position.MIDDLE)
-                                        .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
-                            });
-
-                    dialog.open();
-                } catch (NumberFormatException e) {
-                    Notification.show("Valor total deve ser um número válido.", 3000, Notification.Position.MIDDLE)
-                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                }
-            } else {
-                Notification.show("Preencha todos os campos corretamente.", 3000, Notification.Position.MIDDLE)
-                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            }
-        });
-
-        buttonPrimaryExcluir.addClickListener(event -> {
-            String textFieldIdOS = textFieldID.getValue();
-
-            // Supondo que você tenha um campo ou método para obter o ID da OS
-            int idOS = Integer.parseInt(textFieldIdOS.trim());
-
-            if (!textFieldIdOS.isEmpty()) {
-                ConfirmDialog dialog = new ConfirmDialog(
-                        "Confirmar Exclusão",
-                        "Tem certeza que deseja excluir a ordem de serviço?",
-                        "Excluir",
-                        eventConfirm -> {
-                            try {
-                                // Chama o método do controller para excluir a ordem de serviço
-                                boolean sucesso = osController.deletarOS(idOS);
-
-                                if (sucesso) {
-                                    Notification.show("Ordem de Serviço excluída com sucesso.", 3000,
-                                            Notification.Position.MIDDLE)
-                                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                                    // Limpar campos
-                                    textFieldID.clear();
-                                    textFieldNumeroOS.clear();
-                                    dateTimeAberturaOS.clear();
-                                    dateTimePickerEncerramentoOS.clear();
-                                    textFieldValorTotal.clear();
-                                    comboBoxMecanico.clear();
-                                    comboBoxCliente.clear();
-                                    comboBoxVeiculo.clear();
-                                    comboBoxPecas.clear();
-                                    comboBoxServicos.clear();
-                                    textFieldID.focus();
-                                    atualizarGridConsulta();
                                 } else {
-                                    Notification.show("Erro ao excluir a Ordem de Serviço.", 3000,
+                                    Notification.show("Ordem de Serviço não encontrada.", 3000,
                                             Notification.Position.MIDDLE)
                                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
                                 }
                             } catch (Exception e) {
-                                Notification.show("Erro inesperado ao excluir a Ordem de Serviço.", 3000,
+                                Notification.show("Erro inesperado ao alterar a Ordem de Serviço.", 3000,
                                         Notification.Position.MIDDLE)
                                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
                             }
                         },
                         "Cancelar",
                         eventCancel -> {
-                            Notification.show("Exclusão cancelada.", 3000, Notification.Position.MIDDLE)
+                            Notification.show("Alteração cancelada.", 3000, Notification.Position.MIDDLE)
                                     .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
                         });
 
                 dialog.open();
+            } catch (NumberFormatException e) {
+                Notification.show("Valor total deve ser um número válido.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+
+        buttonPrimaryExcluir.addClickListener(event -> {
+            String textFieldIdOS = textFieldID.getValue().trim();
+
+            // Verifica se o campo ID não está vazio
+            if (!textFieldIdOS.isEmpty()) {
+                try {
+                    // Converte o ID para um número
+                    int idOS = Integer.parseInt(textFieldIdOS);
+
+                    ConfirmDialog dialog = new ConfirmDialog(
+                            "Confirmar Exclusão",
+                            "Tem certeza que deseja excluir a ordem de serviço?",
+                            "Excluir",
+                            eventConfirm -> {
+                                try {
+                                    // Chama o método do controller para excluir a ordem de serviço
+                                    boolean sucesso = osController.deletarOS(idOS);
+
+                                    if (sucesso) {
+                                        Notification.show("Ordem de Serviço excluída com sucesso.", 3000,
+                                                Notification.Position.MIDDLE)
+                                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                                        // Limpar campos
+                                        textFieldID.clear();
+                                        textFieldNumeroOS.clear();
+                                        dateTimeAberturaOS.clear();
+                                        dateTimePickerEncerramentoOS.clear();
+                                        textFieldValorTotal.clear();
+                                        comboBoxMecanico.clear();
+                                        comboBoxCliente.clear();
+                                        comboBoxVeiculo.clear();
+                                        comboBoxPecas.clear();
+                                        comboBoxServicos.clear();
+                                        textFieldID.focus();
+                                        atualizarGridConsulta();
+                                    } else {
+                                        Notification.show("Erro ao excluir a Ordem de Serviço.", 3000,
+                                                Notification.Position.MIDDLE)
+                                                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                                    }
+                                } catch (Exception e) {
+                                    Notification.show("Erro inesperado ao excluir a Ordem de Serviço.", 3000,
+                                            Notification.Position.MIDDLE)
+                                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                                }
+                            },
+                            "Cancelar",
+                            eventCancel -> {
+                                Notification.show("Exclusão cancelada.", 3000, Notification.Position.MIDDLE)
+                                        .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                            });
+
+                    dialog.open();
+                } catch (NumberFormatException e) {
+                    // Notifica o usuário se o ID não for um número válido
+                    Notification
+                            .show("ID da Ordem de Serviço deve ser um número válido.", 3000,
+                                    Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
             } else {
                 Notification.show("ID da Ordem de Serviço não pode estar vazio.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -423,10 +484,13 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
 
     }
 
-    private void pesquisarOS(TextField textFieldNumeroOS, TextField textFieldNumeroOS2, DateTimePicker dateTimePickerDataAbertura,
+    private void pesquisarOS(TextField textFieldID, TextField textFieldNumeroOS,
+            DateTimePicker dateTimePickerDataAbertura,
             DateTimePicker dateTimePickerDataEncerramento, TextField textFieldValorTotal,
             ComboBox<Mecanico> comboBoxMecanico, ComboBox<Cliente> comboBoxCliente,
-            ComboBox<Veiculo> comboBoxVeiculo) {
+            ComboBox<Veiculo> comboBoxVeiculo, MultiSelectComboBox<Peca> comboBoxPecas,
+            MultiSelectComboBox<Servico> comboBoxServicos) {
+
         String numeroOSText = textFieldNumeroOS.getValue();
 
         if (!numeroOSText.isEmpty()) {
@@ -440,6 +504,8 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                     LocalDateTime dataEncerramento = os.getData_encerramento_os();
 
                     // Preencher os campos com os dados da OS encontrada
+                    textFieldID.setValue(String.valueOf(os.getId()));
+                    textFieldNumeroOS.setValue(os.getNumero_os());
                     dateTimePickerDataAbertura.setValue(dataAbertura);
                     dateTimePickerDataEncerramento.setValue(dataEncerramento);
                     textFieldValorTotal.setValue(os.getValor_total().toString());
@@ -447,13 +513,19 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                     comboBoxCliente.setValue(os.getCliente());
                     comboBoxVeiculo.setValue(os.getVeiculo());
 
+                    // Preencher pecas e servicos
+                    comboBoxPecas.setItems(os.getPecas());
+                    comboBoxServicos.setItems(os.getServicos());
+
                     Notification.show("Ordem de Serviço encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     dateTimePickerDataAbertura.focus();
                 } else {
                     // Limpar os campos caso a OS não seja encontrada
-                    limparCamposOS(dateTimePickerDataAbertura, dateTimePickerDataEncerramento, textFieldValorTotal,
-                            comboBoxMecanico, comboBoxCliente, comboBoxVeiculo);
+                    limparCamposOS(textFieldID, textFieldNumeroOS, dateTimePickerDataAbertura,
+                            dateTimePickerDataEncerramento, textFieldValorTotal, comboBoxMecanico,
+                            comboBoxCliente, comboBoxVeiculo, comboBoxPecas,
+                            comboBoxServicos);
                     textFieldNumeroOS.focus();
                     Notification.show("Ordem de Serviço não encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -463,60 +535,63 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         } else {
-            abrirDialogoDePesquisaOS(textFieldNumeroOS, dateTimePickerDataAbertura, dateTimePickerDataEncerramento,
-                    textFieldValorTotal, comboBoxMecanico, comboBoxCliente, comboBoxVeiculo);
+            abrirDialogoDePesquisaOS(textFieldID, textFieldNumeroOS, dateTimePickerDataAbertura,
+                    dateTimePickerDataEncerramento,
+                    textFieldValorTotal, comboBoxMecanico, comboBoxCliente, comboBoxVeiculo, comboBoxPecas,
+                    comboBoxServicos);
         }
     }
 
-    private void limparCamposOS(DateTimePicker dateTimePickerDataAbertura,
-            DateTimePicker dateTimePickerDataEncerramento,
-            TextField textFieldValorTotal, ComboBox<Mecanico> comboBoxMecanico,
-            ComboBox<Cliente> comboBoxCliente, ComboBox<Veiculo> comboBoxVeiculo) {
-        dateTimePickerDataAbertura.setValue(null);
-        dateTimePickerDataEncerramento.setValue(null);
-        textFieldValorTotal.clear();
-        comboBoxMecanico.clear();
-        comboBoxCliente.clear();
-        comboBoxVeiculo.clear();
-    }
-
-    private void abrirDialogoDePesquisaOS(TextField textFieldNumeroOS, DateTimePicker dateTimePickerDataAbertura,
+    private void abrirDialogoDePesquisaOS(TextField textFieldId, TextField textFieldNumeroOS,
+            DateTimePicker dateTimePickerDataAbertura,
             DateTimePicker dateTimePickerDataEncerramento, TextField textFieldValorTotal,
             ComboBox<Mecanico> comboBoxMecanico, ComboBox<Cliente> comboBoxCliente,
-            ComboBox<Veiculo> comboBoxVeiculo) {
+            ComboBox<Veiculo> comboBoxVeiculo, MultiSelectComboBox<Peca> comboBoxPecas2,
+            MultiSelectComboBox<Servico> comboBoxServicos2) {
+
         // Criar a caixa de diálogo para a pesquisa
         Dialog dialog = new Dialog();
         dialog.setWidth("400px");
 
-        // ComboBox para buscar OS pelo número
-        ComboBox<OS> comboBox = new ComboBox<>("Buscar OS");
-        comboBox.setPlaceholder("Digite o número da OS");
-        comboBox.setItemLabelGenerator(OS::getNumero_os);
-
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String numeroOS = event.getDetail().toLowerCase(); // Converte para minúsculas para busca case-insensitive
-            OS osFiltradas = osController.buscarOSPorNumero(numeroOS);
-            comboBox.setItems(osFiltradas);
-        });
+        // Campo para buscar OS pelo número exato
+        TextField campoNumeroOS = new TextField("Buscar OS");
+        campoNumeroOS.setPlaceholder("Digite o número da OS");
 
         // Botão de confirmar seleção
         Button confirmarButton = new Button("Confirmar", e -> {
-            OS osSelecionada = comboBox.getValue();
-            if (osSelecionada != null) {
-                textFieldNumeroOS.setValue(osSelecionada.getNumero_os());
-                dateTimePickerDataAbertura.setValue(osSelecionada.getData_abertura_os());
-                dateTimePickerDataEncerramento.setValue(osSelecionada.getData_encerramento_os());
-                textFieldValorTotal.setValue(osSelecionada.getValor_total().toString());
-                comboBoxMecanico.setValue(osSelecionada.getMecanico());
-                comboBoxCliente.setValue(osSelecionada.getCliente());
-                comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
+            String numeroOS = campoNumeroOS.getValue();
 
-                Notification.show("Ordem de Serviço selecionada: " + osSelecionada.getNumero_os(), 3000,
-                        Notification.Position.MIDDLE)
-                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            if (numeroOS != null && !numeroOS.isEmpty()) {
+                // Buscar OS pelo número fornecido pelo usuário
+                OS osSelecionada = osController.buscarOSPorNumero(numeroOS);
+
+                if (osSelecionada != null) {
+                    // Preencher os campos com os dados da OS encontrada
+                    textFieldId.setValue(String.valueOf(osSelecionada.getId()));
+                    textFieldNumeroOS.setValue(osSelecionada.getNumero_os());
+                    dateTimePickerDataAbertura.setValue(osSelecionada.getData_abertura_os());
+                    dateTimePickerDataEncerramento.setValue(osSelecionada.getData_encerramento_os());
+                    textFieldValorTotal.setValue(osSelecionada.getValor_total().toString());
+                    comboBoxMecanico.setValue(osSelecionada.getMecanico());
+                    comboBoxCliente.setValue(osSelecionada.getCliente());
+                    comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
+
+                    
+                    comboBoxPecas2.deselectAll(); 
+                    comboBoxPecas2.setValue(new HashSet<>(osSelecionada.getPecas()));
+
+                    comboBoxServicos2.deselectAll(); 
+                    comboBoxServicos2.setValue(new HashSet<>(osSelecionada.getServicos()));
+
+                    Notification.show("Ordem de Serviço selecionada: " + osSelecionada.getNumero_os(), 3000,
+                            Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                } else {
+                    Notification.show("Nenhuma ordem de serviço encontrada.", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
             } else {
-                Notification.show("Nenhuma ordem de serviço selecionada.", 3000, Notification.Position.MIDDLE)
+                Notification.show("Por favor, insira um número de OS válido.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
             dialog.close();
@@ -526,10 +601,33 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
         // Layout da caixa de diálogo
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
+        VerticalLayout layout = new VerticalLayout(campoNumeroOS, confirmarButton, cancelarButton);
         dialog.add(layout);
 
         dialog.open();
+    }
+
+    private void limparCamposOS(TextField textFieldID, TextField textFieldNumeroOS,
+            DateTimePicker dateTimePickerAberturaOS,
+            DateTimePicker dateTimePickerEncerramentoOS, TextField textFieldValorTotal,
+            ComboBox<Mecanico> comboBoxMecanico,
+            ComboBox<Cliente> comboBoxCliente, ComboBox<Veiculo> comboBoxVeiculo,
+            MultiSelectComboBox<Peca> comboBoxPecas,
+            MultiSelectComboBox<Servico> comboBoxServicos) {
+        // Limpar todos os campos
+        textFieldID.clear();
+        textFieldNumeroOS.clear();
+        dateTimePickerAberturaOS.clear();
+        dateTimePickerEncerramentoOS.clear();
+        textFieldValorTotal.clear();
+        comboBoxMecanico.clear();
+        comboBoxCliente.clear();
+        comboBoxVeiculo.clear();
+        comboBoxPecas.clear();
+        comboBoxServicos.clear();
+
+        // Focar no campo ID
+        textFieldID.focus();
     }
 
     private void atualizarGridConsulta() {

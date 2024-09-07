@@ -189,63 +189,62 @@ public class VeiculoView extends Composite<VerticalLayout> {
     }
 
     private void alterarVeiculo(TextField textFieldID, TextField textFieldDescricao, TextField textFieldPlaca,
-                            TextField textFieldAnoModelo, ComboBox<Cliente> comboBoxCliente) {
-    String idText = textFieldID.getValue();
-    String descricao = textFieldDescricao.getValue().trim();
-    String placa = textFieldPlaca.getValue().trim();
-    String anoModelo = textFieldAnoModelo.getValue().trim();
-    Cliente cliente = comboBoxCliente.getValue();
+            TextField textFieldAnoModelo, ComboBox<Cliente> comboBoxCliente) {
+        String idText = textFieldID.getValue();
+        String descricao = textFieldDescricao.getValue().trim();
+        String placa = textFieldPlaca.getValue().trim();
+        String anoModelo = textFieldAnoModelo.getValue().trim();
+        Cliente cliente = comboBoxCliente.getValue();
 
-    if (!descricao.isEmpty() && !placa.isEmpty() && !anoModelo.isEmpty() && cliente != null) {
-        try {
-            int id = Integer.parseInt(idText);  // Converter ID para inteiro
+        if (!descricao.isEmpty() && !placa.isEmpty() && !anoModelo.isEmpty() && cliente != null) {
+            try {
+                int id = Integer.parseInt(idText); // Converter ID para inteiro
 
-            ConfirmDialog dialog = new ConfirmDialog(
-                    "Confirmar Alteração",
-                    "Tem certeza que deseja alterar o veículo?",
-                    "Confirmar",
-                    eventConfirm -> {
-                        // Criar o objeto Veiculo e definir seus atributos
-                        Veiculo veiculo = new Veiculo();
-                        veiculo.setId(id);
-                        veiculo.setDescricao_veiculo(descricao);
-                        veiculo.setPlaca(placa);
-                        veiculo.setAno_modelo(anoModelo);
-                        veiculo.setCliente(cliente); // Associar o cliente ao veículo
+                ConfirmDialog dialog = new ConfirmDialog(
+                        "Confirmar Alteração",
+                        "Tem certeza que deseja alterar o veículo?",
+                        "Confirmar",
+                        eventConfirm -> {
+                            // Criar o objeto Veiculo e definir seus atributos
+                            Veiculo veiculo = new Veiculo();
+                            veiculo.setId(id);
+                            veiculo.setDescricao_veiculo(descricao);
+                            veiculo.setPlaca(placa);
+                            veiculo.setAno_modelo(anoModelo);
+                            veiculo.setCliente(cliente); // Associar o cliente ao veículo
 
-                        // Atualizar o veículo usando o controlador
-                        if (veiculoController.atualizarVeiculo(veiculo)) {
-                            Notification.show("Veículo alterado com sucesso.", 3000, Notification.Position.MIDDLE)
-                                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                            // Limpar os campos
-                            textFieldID.clear();
-                            textFieldDescricao.clear();
-                            textFieldPlaca.clear();
-                            textFieldAnoModelo.clear();
-                            comboBoxCliente.clear();
-                            textFieldID.focus();
-                        } else {
-                            Notification.show("Erro ao alterar o veículo.", 3000, Notification.Position.MIDDLE)
-                                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                        }
-                    },
-                    "Cancelar",
-                    eventCancel -> {
-                        Notification.show("Alteração cancelada.", 3000, Notification.Position.MIDDLE)
-                                .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
-                    });
+                            // Atualizar o veículo usando o controlador
+                            if (veiculoController.atualizarVeiculo(veiculo)) {
+                                Notification.show("Veículo alterado com sucesso.", 3000, Notification.Position.MIDDLE)
+                                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                                // Limpar os campos
+                                textFieldID.clear();
+                                textFieldDescricao.clear();
+                                textFieldPlaca.clear();
+                                textFieldAnoModelo.clear();
+                                comboBoxCliente.clear();
+                                textFieldID.focus();
+                            } else {
+                                Notification.show("Erro ao alterar o veículo.", 3000, Notification.Position.MIDDLE)
+                                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                            }
+                        },
+                        "Cancelar",
+                        eventCancel -> {
+                            Notification.show("Alteração cancelada.", 3000, Notification.Position.MIDDLE)
+                                    .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                        });
 
-            dialog.open();  // Abrir o diálogo de confirmação
-        } catch (NumberFormatException e) {
-            Notification.show("ID deve ser um número inteiro válido.", 3000, Notification.Position.MIDDLE)
+                dialog.open(); // Abrir o diálogo de confirmação
+            } catch (NumberFormatException e) {
+                Notification.show("ID deve ser um número inteiro válido.", 3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        } else {
+            Notification.show("Preencha todos os campos corretamente.", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
-    } else {
-        Notification.show("Preencha todos os campos corretamente.", 3000, Notification.Position.MIDDLE)
-                .addThemeVariants(NotificationVariant.LUMO_ERROR);
     }
-}
-
 
     private void excluirVeiculo(TextField textFieldID, TextField textFieldDescricao, TextField textFieldPlaca,
             TextField textFieldAnoModelo, ComboBox<Cliente> comboBoxCliente) {
@@ -306,13 +305,13 @@ public class VeiculoView extends Composite<VerticalLayout> {
                 if (veiculo != null) {
                     textFieldDescricao.setValue(veiculo.getDescricao_veiculo());
                     textFieldPlaca.setValue(veiculo.getPlaca());
-                    textFieldAnoModelo.setValue(String.valueOf(veiculo.getAno_modelo()));
+                    textFieldAnoModelo.setValue(veiculo.getAno_modelo());
                     comboBoxCliente.setValue(veiculo.getCliente());
-
                     Notification.show("Veículo encontrado.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textFieldDescricao.focus();
                 } else {
+                    // Limpar todos os campos caso o veículo não seja encontrado
                     textFieldDescricao.clear();
                     textFieldPlaca.clear();
                     textFieldAnoModelo.clear();
@@ -332,47 +331,89 @@ public class VeiculoView extends Composite<VerticalLayout> {
     }
 
     private void abrirDialogoDePesquisaVeiculo(TextField textFieldID, TextField textFieldDescricao,
-            TextField textFieldPlaca, TextField textFieldAnoModelo,
-            ComboBox<Cliente> comboBoxCliente) {
+            TextField textFieldPlaca,
+            TextField textFieldAnoModelo, ComboBox<Cliente> comboBoxCliente) {
+
         Dialog dialog = new Dialog();
-        dialog.setWidth("400px");
+        dialog.setWidth("800px"); // Ajuste conforme necessário
 
-        ComboBox<Veiculo> comboBox = new ComboBox<>("Buscar Veículo");
-        comboBox.setPlaceholder("Digite a descrição do veículo");
-        comboBox.setItemLabelGenerator(Veiculo::getDescricao_veiculo);
+        // Campo de busca
+        TextField searchField = new TextField("Buscar Veículo");
+        searchField.setPlaceholder("Digite a descrição do veículo");
+        searchField.setWidthFull();
 
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String descricaoVeiculo = event.getDetail().toLowerCase(); // Converte para minúsculas para busca
-                                                                       // case-insensitive
-            List<Veiculo> veiculosFiltrados = veiculoController.buscarVeiculosPorDescricao(descricaoVeiculo);
-            comboBox.setItems(veiculosFiltrados);
+        // Grid para exibir os veículos
+        Grid<Veiculo> grid = new Grid<>(Veiculo.class, false);
+        grid.addColumn(Veiculo::getId).setHeader("ID").setAutoWidth(true);
+        grid.addColumn(Veiculo::getDescricao_veiculo).setHeader("Descrição").setAutoWidth(true);
+        grid.addColumn(Veiculo::getPlaca).setHeader("Placa").setAutoWidth(true);
+        grid.addColumn(Veiculo::getAno_modelo).setHeader("Ano Modelo").setAutoWidth(true);
+        grid.addColumn(veiculo -> veiculo.getCliente() != null ? veiculo.getCliente().getNome() : "Nenhum")
+                .setHeader("Cliente").setAutoWidth(true);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+
+        // Definir altura do grid manualmente
+        grid.setHeight("400px"); // Ajuste conforme necessário
+
+        // Listener para buscar e exibir os veículos conforme o usuário digita
+        searchField.addValueChangeListener(event -> {
+            String descricaoVeiculo = event.getValue().trim().toLowerCase();
+            if (!descricaoVeiculo.isEmpty()) {
+                List<Veiculo> veiculosFiltrados = veiculoController.buscarVeiculosPorDescricao(descricaoVeiculo);
+                grid.setItems(veiculosFiltrados);
+            } else {
+                grid.setItems(); // Limpa o grid se o campo de busca estiver vazio
+            }
         });
 
-        Button confirmarButton = new Button("Confirmar", e -> {
-            Veiculo veiculoSelecionado = comboBox.getValue();
+        // Evento de duplo clique para selecionar um veículo
+        grid.addItemDoubleClickListener(event -> {
+            Veiculo veiculoSelecionado = event.getItem();
             if (veiculoSelecionado != null) {
                 textFieldID.setValue(String.valueOf(veiculoSelecionado.getId()));
                 textFieldDescricao.setValue(veiculoSelecionado.getDescricao_veiculo());
                 textFieldPlaca.setValue(veiculoSelecionado.getPlaca());
-                textFieldAnoModelo.setValue(String.valueOf(veiculoSelecionado.getAno_modelo()));
+                textFieldAnoModelo.setValue(veiculoSelecionado.getAno_modelo());
                 comboBoxCliente.setValue(veiculoSelecionado.getCliente());
-
                 Notification.show("Veículo selecionado: " + veiculoSelecionado.getDescricao_veiculo(), 3000,
                         Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a seleção
+            }
+        });
+
+        // Botões de ação
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Veiculo veiculoSelecionado = grid.asSingleSelect().getValue();
+            if (veiculoSelecionado != null) {
+                textFieldID.setValue(String.valueOf(veiculoSelecionado.getId()));
+                textFieldDescricao.setValue(veiculoSelecionado.getDescricao_veiculo());
+                textFieldPlaca.setValue(veiculoSelecionado.getPlaca());
+                textFieldAnoModelo.setValue(veiculoSelecionado.getAno_modelo());
+                comboBoxCliente.setValue(veiculoSelecionado.getCliente());
+                Notification.show("Veículo selecionado: " + veiculoSelecionado.getDescricao_veiculo(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a confirmação
             } else {
                 Notification.show("Nenhum veículo selecionado.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
-            dialog.close();
         });
 
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
-        dialog.add(layout);
+        HorizontalLayout actions = new HorizontalLayout(confirmarButton, cancelarButton);
 
+        VerticalLayout layout = new VerticalLayout(searchField, grid, actions);
+        layout.setSizeFull();
+        layout.setSpacing(true);
+        layout.setPadding(true);
+
+        // Atribuindo flexGrow para que o Grid ocupe o espaço restante
+        layout.setFlexGrow(1, grid);
+
+        dialog.add(layout);
         dialog.open();
     }
 

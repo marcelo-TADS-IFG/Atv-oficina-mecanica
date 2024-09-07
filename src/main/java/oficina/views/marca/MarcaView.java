@@ -223,7 +223,7 @@ public class MarcaView extends Composite<VerticalLayout> {
         }
     }
 
-    private void pesquisarMarca(TextField textFieldID, TextField textFieldNome) {
+    private void pesquisarMarca(TextField textFieldID, TextField textFieldNomeMarca) {
         String idText = textFieldID.getValue();
 
         if (!idText.isEmpty()) {
@@ -233,12 +233,13 @@ public class MarcaView extends Composite<VerticalLayout> {
                 Marca marca = marcaController.buscarMarcaPorId(id);
 
                 if (marca != null) {
-                    textFieldNome.setValue(marca.getNome_marca());
+                    textFieldNomeMarca.setValue(marca.getNome_marca());
                     Notification.show("Marca encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    textFieldNome.focus();
+                    textFieldNomeMarca.focus();
                 } else {
-                    textFieldNome.clear();
+                    // Limpar todos os campos caso a marca não seja encontrada
+                    textFieldNomeMarca.clear();
                     textFieldID.focus();
                     Notification.show("Marca não encontrada.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -248,46 +249,82 @@ public class MarcaView extends Composite<VerticalLayout> {
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         } else {
-            abrirDialogoDePesquisa(textFieldID, textFieldNome);
+            abrirDialogoDePesquisaMarca(textFieldID, textFieldNomeMarca);
         }
     }
 
-    private void abrirDialogoDePesquisa(TextField textFieldID, TextField textFieldNome) {
+    private void abrirDialogoDePesquisaMarca(TextField textFieldID, TextField textFieldNomeMarca) {
+
         Dialog dialog = new Dialog();
-        dialog.setWidth("400px");
+        dialog.setWidth("600px"); // Ajuste conforme necessário
 
-        ComboBox<Marca> comboBox = new ComboBox<>("Buscar Marca");
-        comboBox.setPlaceholder("Digite o nome da marca");
-        comboBox.setItemLabelGenerator(Marca::getNome_marca);
+        // Campo de busca
+        TextField searchField = new TextField("Buscar Marca");
+        searchField.setPlaceholder("Digite o nome da marca");
+        searchField.setWidthFull();
 
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String nomeMarca = event.getDetail().toLowerCase(); // Converte para minúsculas para busca case-insensitive
-            List<Marca> marcasFiltradas = marcaController.buscarMarcasPorNome(nomeMarca);
-            comboBox.setItems(marcasFiltradas);
+        // Grid para exibir as marcas
+        Grid<Marca> grid = new Grid<>(Marca.class, false);
+        grid.addColumn(Marca::getId).setHeader("ID").setAutoWidth(true);
+        grid.addColumn(Marca::getNome_marca).setHeader("Nome da Marca").setAutoWidth(true);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+
+        // Definir altura do grid manualmente
+        grid.setHeight("300px"); // Ajuste conforme necessário
+
+        // Listener para buscar e exibir as marcas conforme o usuário digita
+        searchField.addValueChangeListener(event -> {
+            String nomeMarca = event.getValue().trim().toLowerCase();
+            if (!nomeMarca.isEmpty()) {
+                List<Marca> marcasFiltradas = marcaController.buscarMarcasPorNome(nomeMarca);
+                grid.setItems(marcasFiltradas);
+            } else {
+                grid.setItems(); // Limpa o grid se o campo de busca estiver vazio
+            }
         });
 
-        Button confirmarButton = new Button("Confirmar", e -> {
-            Marca marcaSelecionada = comboBox.getValue();
+        // Evento de duplo clique para selecionar uma marca
+        grid.addItemDoubleClickListener(event -> {
+            Marca marcaSelecionada = event.getItem();
             if (marcaSelecionada != null) {
                 textFieldID.setValue(String.valueOf(marcaSelecionada.getId()));
-                textFieldNome.setValue(marcaSelecionada.getNome_marca());
-                Notification
-                        .show("Marca selecionada: " + marcaSelecionada.getNome_marca(), 3000,
-                                Notification.Position.MIDDLE)
+                textFieldNomeMarca.setValue(marcaSelecionada.getNome_marca());
+                Notification.show("Marca selecionada: " + marcaSelecionada.getNome_marca(), 3000,
+                        Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a seleção
+            }
+        });
+
+        // Botões de ação
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Marca marcaSelecionada = grid.asSingleSelect().getValue();
+            if (marcaSelecionada != null) {
+                textFieldID.setValue(String.valueOf(marcaSelecionada.getId()));
+                textFieldNomeMarca.setValue(marcaSelecionada.getNome_marca());
+                Notification.show("Marca selecionada: " + marcaSelecionada.getNome_marca(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a confirmação
             } else {
                 Notification.show("Nenhuma marca selecionada.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
-            dialog.close();
         });
 
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
-        dialog.add(layout);
+        HorizontalLayout actions = new HorizontalLayout(confirmarButton, cancelarButton);
 
+        VerticalLayout layout = new VerticalLayout(searchField, grid, actions);
+        layout.setSizeFull();
+        layout.setSpacing(true);
+        layout.setPadding(true);
+
+        // Atribuindo flexGrow para que o Grid ocupe o espaço restante
+        layout.setFlexGrow(1, grid);
+
+        dialog.add(layout);
         dialog.open();
     }
 

@@ -7,7 +7,6 @@ public class Peca {
     private String descricao;
     private BigDecimal preco;
     private Marca marca;
-    //private int quantidade;
 
     public int getId() {
         return id;
@@ -40,13 +39,5 @@ public class Peca {
     public void setMarca(Marca marca) {
         this.marca = marca;
     }
-
-    /*public int getQuantidade() {
-        return quantidade;
-    }
-
-    public void setQuantidade(int quantidade) {
-        this.quantidade = quantidade;
-    }*/
 
 }

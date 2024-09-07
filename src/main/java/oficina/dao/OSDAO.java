@@ -160,9 +160,11 @@ public class OSDAO {
                     String insertOSPeca = "INSERT INTO os_peca (id_os, id_peca) VALUES (?, ?)";
                     preparedStatement = connection.prepareStatement(insertOSPeca);
                     for (Peca peca : os.getPecas()) {
-                        preparedStatement.setInt(1, os.getId());
-                        preparedStatement.setInt(2, peca.getId());
-                        preparedStatement.addBatch();
+                        if (peca != null && peca.getId() != 0) { // Verificar se a peça e o ID são válidos
+                            preparedStatement.setInt(1, os.getId());
+                            preparedStatement.setInt(2, peca.getId());
+                            preparedStatement.addBatch();
+                        }
                     }
                     preparedStatement.executeBatch();
                 }
@@ -172,9 +174,11 @@ public class OSDAO {
                     String insertOSServico = "INSERT INTO os_servico (id_os, id_servico) VALUES (?, ?)";
                     preparedStatement = connection.prepareStatement(insertOSServico);
                     for (Servico servico : os.getServicos()) {
-                        preparedStatement.setInt(1, os.getId());
-                        preparedStatement.setInt(2, servico.getId());
-                        preparedStatement.addBatch();
+                        if (servico != null && servico.getId() != 0) { // Verificar se o serviço e o ID são válidos
+                            preparedStatement.setInt(1, os.getId());
+                            preparedStatement.setInt(2, servico.getId());
+                            preparedStatement.addBatch();
+                        }
                     }
                     preparedStatement.executeBatch();
                 }
@@ -341,52 +345,39 @@ public class OSDAO {
 
         String sql = "SELECT * FROM os WHERE numero_os = ?";
 
-        // Bloco try-catch para capturar possíveis exceções
-        try {
-            // Obter a conexão
-            Connection connection = DBConnection.getInstance().getConnection();
+        try (Connection connection = DBConnection.getInstance().getConnection();
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
 
-            // Preparar a declaração SQL
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-                stmt.setString(1, numeroOS);
+            stmt.setString(1, numeroOS);
 
-                // Executar a consulta
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        os = new OS();
-                        os.setId(rs.getInt("id"));
-                        os.setNumero_os(rs.getString("numero_os"));
-                        os.setData_abertura_os(rs.getTimestamp("data_abertura_os").toLocalDateTime());
-                        os.setData_encerramento_os(rs.getTimestamp("data_encerramento_os") != null
-                                ? rs.getTimestamp("data_encerramento_os").toLocalDateTime()
-                                : null);
-                        os.setValor_total(rs.getBigDecimal("valor_total"));
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    os = new OS();
+                    os.setId(rs.getInt("id"));
+                    os.setNumero_os(rs.getString("numero_os"));
+                    os.setData_abertura_os(rs.getTimestamp("data_abertura_os").toLocalDateTime());
+                    os.setData_encerramento_os(rs.getTimestamp("data_encerramento_os") != null
+                            ? rs.getTimestamp("data_encerramento_os").toLocalDateTime()
+                            : null);
+                    os.setValor_total(rs.getBigDecimal("valor_total"));
 
-                        // Buscar mecânico
-                        os.setMecanico(buscarMecanicoPorId(rs.getInt("id_mecanico")));
+                    // Buscar mecânico, cliente e veículo
+                    os.setMecanico(buscarMecanicoPorId(rs.getInt("id_mecanico")));
+                    os.setCliente(buscarClientePorId(rs.getInt("id_cliente")));
+                    os.setVeiculo(buscarVeiculoPorId(rs.getInt("id_veiculo")));
 
-                        // Buscar cliente
-                        os.setCliente(buscarClientePorId(rs.getInt("id_cliente")));
+                    // Buscar todas as peças relacionadas à OS
+                    List<Peca> pecas = buscarPecasPorOsId(os.getId());
+                    os.setPecas(pecas);
 
-                        // Buscar veículo
-                        os.setVeiculo(buscarVeiculoPorId(rs.getInt("id_veiculo")));
-
-                        Peca peca = buscarPecasPorOsId(os.getId());
-                        List<Peca> pecas = new ArrayList<>();
-                        pecas.add(peca);
-                        os.setPecas(pecas);
-
-                        Servico servico = buscarServicosPorOsId(os.getId());
-                        List<Servico> servicos = new ArrayList<>();
-                        servicos.add(servico);
-                    }
+                    // Buscar todos os serviços relacionados à OS
+                    List<Servico> servicos = buscarServicosPorOsId(os.getId());
+                    os.setServicos(servicos);
                 }
             }
+
         } catch (SQLException e) {
-            // Logar a exceção
-            e.printStackTrace();
-        } catch (Exception e) {
-            // Captura qualquer outra exceção inesperada
+            logger.log(Level.SEVERE, "Erro ao buscar OS por número: " + numeroOS, e);
             e.printStackTrace();
         }
 
@@ -487,59 +478,70 @@ public class OSDAO {
         }
     }
 
-    private Peca buscarPecasPorOsId(int idPeca) {
-        try {
-            Connection connection = DBConnection.getInstance().getConnection();
-            String busca = "SELECT * FROM peca WHERE id = ?";
-            PreparedStatement preparedStatement = connection.prepareStatement(busca);
-            preparedStatement.setInt(1, idPeca);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                Peca peca = new Peca();
-                peca.setId(resultSet.getInt("id"));
-                peca.setDescricao(resultSet.getString("descricao"));
-                peca.setPreco(resultSet.getBigDecimal("preco"));
+    private List<Peca> buscarPecasPorOsId(int idOs) {
+        List<Peca> pecas = new ArrayList<>();
 
-                logger.log(Level.INFO, "Peça encontrada: {0}", peca.getDescricao());
-                return peca;
+        String sql = "SELECT p.* FROM os_peca op " +
+                "JOIN peca p ON op.id_peca = p.id " +
+                "WHERE op.id_os = ?";
+
+        try (Connection connection = DBConnection.getInstance().getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, idOs);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Peca peca = new Peca();
+                    peca.setId(resultSet.getInt("id"));
+                    peca.setDescricao(resultSet.getString("descricao"));
+                    peca.setPreco(resultSet.getBigDecimal("preco"));
+                    pecas.add(peca);
+                }
             }
-            logger.log(Level.WARNING, "Peça com ID {0} não encontrada", idPeca);
-            return null;
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Erro ao buscar a peça com ID: " + idPeca, e);
+
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Erro ao buscar peças para a OS com ID: " + idOs, e);
             Notification notification = new Notification(
-                    "Erro ao buscar. Por favor, verifique a mensagem a seguir: " + e.getMessage());
+                    "Erro ao buscar peças. Verifique a mensagem a seguir: " + e.getMessage());
             notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
             notification.open();
-            return null;
         }
+
+        return pecas;
     }
 
-    private Servico buscarServicosPorOsId(int idServico) {
-        try {
-            Connection connection = DBConnection.getInstance().getConnection();
-            String busca = "SELECT * FROM servico WHERE id = ?";
-            PreparedStatement preparedStatement = connection.prepareStatement(busca);
-            preparedStatement.setInt(1, idServico);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                Servico servico = new Servico();
-                servico.setId(resultSet.getInt("id"));
-                servico.setDescricao_servico(resultSet.getString("descricao_servico"));
-                servico.setValor_servico(resultSet.getBigDecimal("valor_servico"));
-                logger.log(Level.INFO, "Serviço encontrado: {0}", servico.getDescricao_servico());
-                return servico;
+    private List<Servico> buscarServicosPorOsId(int idOs) {
+        List<Servico> servicos = new ArrayList<>();
+
+        String sql = "SELECT s.* FROM os_servico os " +
+                "JOIN servico s ON os.id_servico = s.id " +
+                "WHERE os.id_os = ?";
+
+        try (Connection connection = DBConnection.getInstance().getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, idOs);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Servico servico = new Servico();
+                    servico.setId(resultSet.getInt("id"));
+                    servico.setDescricao_servico(resultSet.getString("descricao_servico"));
+                    servico.setValor_servico(resultSet.getBigDecimal("valor_servico"));
+                    servicos.add(servico);
+                }
             }
-            logger.log(Level.WARNING, "Serviço com ID {0} não encontrado", idServico);
-            return null;
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Erro ao buscar o serviço com ID: " + idServico, e);
+
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Erro ao buscar serviços para a OS com ID: " + idOs, e);
             Notification notification = new Notification(
-                    "Erro ao buscar. Por favor, verifique a mensagem a seguir: " + e.getMessage());
+                    "Erro ao buscar serviços. Verifique a mensagem a seguir: " + e.getMessage());
             notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
             notification.open();
-            return null;
         }
+
+        return servicos;
     }
 
 }

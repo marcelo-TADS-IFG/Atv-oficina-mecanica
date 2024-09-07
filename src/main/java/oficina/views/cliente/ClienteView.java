@@ -113,7 +113,8 @@ public class ClienteView extends Composite<VerticalLayout> {
                 emailFieldCpf, textFieldCidade, textFieldTelefone));
         buttonExcluir.addClickListener(event -> excluirCliente(textFieldID, textFieldNome, textFieldEndereco,
                 emailFieldCpf, textFieldCidade, textFieldTelefone));
-        buttonPesquisar.addClickListener(event -> pesquisarCliente(textFieldID, textFieldNome, textFieldEndereco, emailFieldCpf, textFieldCidade, textFieldTelefone));
+        buttonPesquisar.addClickListener(event -> pesquisarCliente(textFieldID, textFieldNome, textFieldEndereco,
+                emailFieldCpf, textFieldCidade, textFieldTelefone));
 
         // Double-click event on grid
         gridConsulta.addItemDoubleClickListener(event -> {
@@ -145,7 +146,7 @@ public class ClienteView extends Composite<VerticalLayout> {
             // Verificar se os campos obrigatórios não estão vazios
             if (!nome.isEmpty() && !endereco.isEmpty() && !cpf.isEmpty() && !cidade.isEmpty() && !telefone.isEmpty()) {
                 // Converter ID, assumindo que é um campo numérico
-                //int id = Integer.parseInt(textFieldID.getValue().trim());
+                // int id = Integer.parseInt(textFieldID.getValue().trim());
 
                 // Criar o objeto Cliente
                 Cliente cliente = new Cliente(0, nome, endereco, cpf, cidade, telefone);
@@ -280,7 +281,7 @@ public class ClienteView extends Composite<VerticalLayout> {
     }
 
     private void pesquisarCliente(TextField textFieldID, TextField textFieldNome, TextField textFieldEndereco,
-    EmailField emailFieldCpf, TextField textFieldCidade, TextField textFieldTelefone) {
+            EmailField emailFieldCpf, TextField textFieldCidade, TextField textFieldTelefone) {
         String idText = textFieldID.getValue();
 
         if (!idText.isEmpty()) {
@@ -291,12 +292,19 @@ public class ClienteView extends Composite<VerticalLayout> {
 
                 if (cliente != null) {
                     textFieldNome.setValue(cliente.getNome());
+                    textFieldEndereco.setValue(cliente.getEndereco());
+                    emailFieldCpf.setValue(cliente.getCpf());
+                    textFieldCidade.setValue(cliente.getCidade());
                     textFieldTelefone.setValue(cliente.getTelefone());
                     Notification.show("Cliente encontrado.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textFieldNome.focus();
                 } else {
+                    // Limpar todos os campos caso o cliente não seja encontrado
                     textFieldNome.clear();
+                    textFieldEndereco.clear();
+                    emailFieldCpf.clear();
+                    textFieldCidade.clear();
                     textFieldTelefone.clear();
                     textFieldID.focus();
                     Notification.show("Cliente não encontrado.", 3000, Notification.Position.MIDDLE)
@@ -307,52 +315,98 @@ public class ClienteView extends Composite<VerticalLayout> {
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         } else {
-            abrirDialogoDePesquisaCliente(textFieldID, textFieldNome);
+            abrirDialogoDePesquisaCliente(textFieldID, textFieldNome, textFieldEndereco, emailFieldCpf, textFieldCidade,
+                    textFieldTelefone);
         }
     }
 
-    private void abrirDialogoDePesquisaCliente(TextField textFieldID, TextField textFieldNome) {
+    private void abrirDialogoDePesquisaCliente(TextField textFieldID, TextField textFieldNome,
+            TextField textFieldEndereco,
+            EmailField emailFieldCpf, TextField textFieldCidade, TextField textFieldTelefone) {
+
         Dialog dialog = new Dialog();
-        dialog.setWidth("400px");
+        dialog.setWidth("800px"); // Aumentei a largura para acomodar mais colunas
 
-        ComboBox<Cliente> comboBox = new ComboBox<>("Buscar Cliente");
-        comboBox.setPlaceholder("Digite o nome do cliente");
-        comboBox.setItemLabelGenerator(Cliente::getNome);
+        // Campo de busca
+        TextField searchField = new TextField("Buscar Cliente");
+        searchField.setPlaceholder("Digite o nome do cliente");
+        searchField.setWidthFull();
 
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String nomeCliente = event.getDetail().toLowerCase(); // Converte para minúsculas para busca
-                                                                  // case-insensitive
-            List<Cliente> clientesFiltrados = clienteController.buscarClientesPorNome(nomeCliente);
-            comboBox.setItems(clientesFiltrados);
+        // Grid para exibir os clientes
+        Grid<Cliente> grid = new Grid<>(Cliente.class, false);
+        grid.addColumn(Cliente::getId).setHeader("ID").setAutoWidth(true);
+        grid.addColumn(Cliente::getNome).setHeader("Nome").setAutoWidth(true);
+        grid.addColumn(Cliente::getEndereco).setHeader("Endereço").setAutoWidth(true);
+        grid.addColumn(Cliente::getCpf).setHeader("CPF").setAutoWidth(true);
+        grid.addColumn(Cliente::getCidade).setHeader("Cidade").setAutoWidth(true);
+        grid.addColumn(Cliente::getTelefone).setHeader("Telefone").setAutoWidth(true);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+
+        // Definir altura do grid manualmente
+        grid.setHeight("400px"); // Aumentei a altura para acomodar mais linhas
+
+        // Listener para buscar e exibir os clientes conforme o usuário digita
+        searchField.addValueChangeListener(event -> {
+            String nomeCliente = event.getValue().trim().toLowerCase();
+            if (!nomeCliente.isEmpty()) {
+                List<Cliente> clientesFiltrados = clienteController.buscarClientesPorNome(nomeCliente);
+                grid.setItems(clientesFiltrados);
+            } else {
+                grid.setItems(); // Limpa o grid se o campo de busca estiver vazio
+            }
         });
 
-        Button confirmarButton = new Button("Confirmar", e -> {
-            Cliente clienteSelecionado = comboBox.getValue();
+        // Evento de duplo clique para selecionar um cliente
+        grid.addItemDoubleClickListener(event -> {
+            Cliente clienteSelecionado = event.getItem();
             if (clienteSelecionado != null) {
                 textFieldID.setValue(String.valueOf(clienteSelecionado.getId()));
                 textFieldNome.setValue(clienteSelecionado.getNome());
+                textFieldEndereco.setValue(clienteSelecionado.getEndereco());
+                emailFieldCpf.setValue(clienteSelecionado.getCpf());
+                textFieldCidade.setValue(clienteSelecionado.getCidade());
+                textFieldTelefone.setValue(clienteSelecionado.getTelefone());
                 Notification.show("Cliente selecionado: " + clienteSelecionado.getNome(), 3000,
                         Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a seleção
+            }
+        });
+
+        // Botões de ação
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Cliente clienteSelecionado = grid.asSingleSelect().getValue();
+            if (clienteSelecionado != null) {
+                textFieldID.setValue(String.valueOf(clienteSelecionado.getId()));
+                textFieldNome.setValue(clienteSelecionado.getNome());
+                textFieldEndereco.setValue(clienteSelecionado.getEndereco());
+                emailFieldCpf.setValue(clienteSelecionado.getCpf());
+                textFieldCidade.setValue(clienteSelecionado.getCidade());
+                textFieldTelefone.setValue(clienteSelecionado.getTelefone());
+                Notification.show("Cliente selecionado: " + clienteSelecionado.getNome(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a confirmação
             } else {
                 Notification.show("Nenhum cliente selecionado.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
-            dialog.close();
         });
 
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
+        HorizontalLayout actions = new HorizontalLayout(confirmarButton, cancelarButton);
+
+        VerticalLayout layout = new VerticalLayout(searchField, grid, actions);
+        layout.setSizeFull();
+        layout.setSpacing(true);
+        layout.setPadding(true);
+
+        // Atribuindo flexGrow para que o Grid ocupe o espaço restante
+        layout.setFlexGrow(1, grid);
+
         dialog.add(layout);
-
         dialog.open();
-    }
-
-    private void pesquisarCliente(TextField textFieldNome) {
-        List<Cliente> clientes = clienteController.buscarClientesPorNome(textFieldNome.getValue());
-        gridConsulta.setItems(clientes);
     }
 
     private void atualizarGridConsulta() {

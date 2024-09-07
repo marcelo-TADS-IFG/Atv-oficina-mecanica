@@ -265,11 +265,12 @@ public class ServiçosView extends Composite<VerticalLayout> {
 
                 if (servico != null) {
                     textFieldDescricao.setValue(servico.getDescricao_servico());
-                    textFieldValor.setValue(String.valueOf(servico.getValor_servico()));
+                    textFieldValor.setValue(servico.getValor_servico().toString());
                     Notification.show("Serviço encontrado.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textFieldDescricao.focus();
                 } else {
+                    // Limpar todos os campos caso o serviço não seja encontrado
                     textFieldDescricao.clear();
                     textFieldValor.clear();
                     textFieldID.focus();
@@ -281,47 +282,86 @@ public class ServiçosView extends Composite<VerticalLayout> {
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         } else {
-            abrirDialogoDePesquisa(textFieldID, textFieldDescricao);
+            abrirDialogoDePesquisaServico(textFieldID, textFieldDescricao, textFieldValor);
         }
     }
 
-    private void abrirDialogoDePesquisa(TextField textFieldID, TextField textFieldDescricao) {
+    private void abrirDialogoDePesquisaServico(TextField textFieldID, TextField textFieldDescricao,
+            TextField textFieldValor) {
+
         Dialog dialog = new Dialog();
-        dialog.setWidth("400px");
+        dialog.setWidth("600px"); // Ajuste conforme necessário
 
-        ComboBox<Servico> comboBox = new ComboBox<>("Buscar Serviço");
-        comboBox.setPlaceholder("Digite a descrição do serviço");
-        comboBox.setItemLabelGenerator(Servico::getDescricao_servico);
+        // Campo de busca
+        TextField searchField = new TextField("Buscar Serviço");
+        searchField.setPlaceholder("Digite a descrição do serviço");
+        searchField.setWidthFull();
 
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String descricaoServico = event.getDetail().toLowerCase(); // Converte para minúsculas para busca
-                                                                       // case-insensitive
-            List<Servico> servicosFiltrados = servicoController.buscarServicosPorDescricao(descricaoServico);
-            comboBox.setItems(servicosFiltrados);
+        // Grid para exibir os serviços
+        Grid<Servico> grid = new Grid<>(Servico.class, false);
+        grid.addColumn(Servico::getId).setHeader("ID").setAutoWidth(true);
+        grid.addColumn(Servico::getDescricao_servico).setHeader("Descrição").setAutoWidth(true);
+        grid.addColumn(servico -> servico.getValor_servico().toString()).setHeader("Valor").setAutoWidth(true);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+
+        // Definir altura do grid manualmente
+        grid.setHeight("300px"); // Ajuste conforme necessário
+
+        // Listener para buscar e exibir os serviços conforme o usuário digita
+        searchField.addValueChangeListener(event -> {
+            String descricaoServico = event.getValue().trim().toLowerCase();
+            if (!descricaoServico.isEmpty()) {
+                List<Servico> servicosFiltrados = servicoController.buscarServicosPorDescricao(descricaoServico);
+                grid.setItems(servicosFiltrados);
+            } else {
+                grid.setItems(); // Limpa o grid se o campo de busca estiver vazio
+            }
         });
 
-        Button confirmarButton = new Button("Confirmar", e -> {
-            Servico servicoSelecionado = comboBox.getValue();
+        // Evento de duplo clique para selecionar um serviço
+        grid.addItemDoubleClickListener(event -> {
+            Servico servicoSelecionado = event.getItem();
             if (servicoSelecionado != null) {
                 textFieldID.setValue(String.valueOf(servicoSelecionado.getId()));
                 textFieldDescricao.setValue(servicoSelecionado.getDescricao_servico());
-                Notification
-                        .show("Serviço selecionado: " + servicoSelecionado.getDescricao_servico(), 3000,
-                                Notification.Position.MIDDLE)
+                textFieldValor.setValue(servicoSelecionado.getValor_servico().toString());
+                Notification.show("Serviço selecionado: " + servicoSelecionado.getDescricao_servico(), 3000,
+                        Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a seleção
+            }
+        });
+
+        // Botões de ação
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Servico servicoSelecionado = grid.asSingleSelect().getValue();
+            if (servicoSelecionado != null) {
+                textFieldID.setValue(String.valueOf(servicoSelecionado.getId()));
+                textFieldDescricao.setValue(servicoSelecionado.getDescricao_servico());
+                textFieldValor.setValue(servicoSelecionado.getValor_servico().toString());
+                Notification.show("Serviço selecionado: " + servicoSelecionado.getDescricao_servico(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a confirmação
             } else {
                 Notification.show("Nenhum serviço selecionado.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
-            dialog.close();
         });
 
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
-        dialog.add(layout);
+        HorizontalLayout actions = new HorizontalLayout(confirmarButton, cancelarButton);
 
+        VerticalLayout layout = new VerticalLayout(searchField, grid, actions);
+        layout.setSizeFull();
+        layout.setSpacing(true);
+        layout.setPadding(true);
+
+        // Atribuindo flexGrow para que o Grid ocupe o espaço restante
+        layout.setFlexGrow(1, grid);
+
+        dialog.add(layout);
         dialog.open();
     }
 

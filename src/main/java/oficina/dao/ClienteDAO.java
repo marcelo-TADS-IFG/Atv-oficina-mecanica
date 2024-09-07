@@ -92,13 +92,12 @@ public class ClienteDAO {
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
                 Cliente cliente = new Cliente(
-                    resultSet.getInt("id"),
-                    resultSet.getString("nome"),
-                    resultSet.getString("endereco"),
-                    resultSet.getString("cpf"),
-                    resultSet.getString("cidade"),
-                    resultSet.getString("telefone")
-                );
+                        resultSet.getInt("id"),
+                        resultSet.getString("nome"),
+                        resultSet.getString("endereco"),
+                        resultSet.getString("cpf"),
+                        resultSet.getString("cidade"),
+                        resultSet.getString("telefone"));
                 logger.log(Level.INFO, "Cliente encontrado: {0}", cliente.getNome());
                 return cliente;
             }
@@ -116,21 +115,20 @@ public class ClienteDAO {
 
     public List<Cliente> buscarClientesPorNome(String nome) {
         List<Cliente> clientes = new ArrayList<>();
-        String sql = "SELECT * FROM cliente WHERE nome LIKE ?";
+        String sql = "SELECT * FROM cliente WHERE LOWER(TRIM(nome)) LIKE LOWER(TRIM(?))";
         try {
             Connection connection = DBConnection.getInstance().getConnection();
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, nome + "%");
+            preparedStatement.setString(1, nome.trim().toLowerCase() + "%");
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 Cliente cliente = new Cliente(
-                    resultSet.getInt("id"),
-                    resultSet.getString("nome"),
-                    resultSet.getString("endereco"),
-                    resultSet.getString("cpf"),
-                    resultSet.getString("cidade"),
-                    resultSet.getString("telefone")
-                );
+                        resultSet.getInt("id"),
+                        resultSet.getString("nome"),
+                        resultSet.getString("endereco"),
+                        resultSet.getString("cpf"),
+                        resultSet.getString("cidade"),
+                        resultSet.getString("telefone"));
                 clientes.add(cliente);
             }
             logger.log(Level.INFO, "Clientes encontrados com sucesso para o nome: {0}", nome);
@@ -153,13 +151,12 @@ public class ClienteDAO {
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 Cliente cliente = new Cliente(
-                    resultSet.getInt("id"),
-                    resultSet.getString("nome"),
-                    resultSet.getString("endereco"),
-                    resultSet.getString("cpf"),
-                    resultSet.getString("cidade"),
-                    resultSet.getString("telefone")
-                );
+                        resultSet.getInt("id"),
+                        resultSet.getString("nome"),
+                        resultSet.getString("endereco"),
+                        resultSet.getString("cpf"),
+                        resultSet.getString("cidade"),
+                        resultSet.getString("telefone"));
                 lista.add(cliente);
             }
             logger.log(Level.INFO, "Todos os clientes foram buscados com sucesso");

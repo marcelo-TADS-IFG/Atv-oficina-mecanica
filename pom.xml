@@ -20,6 +20,12 @@
         <version>3.2.8</version>
     </parent>
 
+    <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+
+
     <repositories>
         <repository>
             <id>Vaadin Directory</id>

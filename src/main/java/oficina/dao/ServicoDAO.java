@@ -106,11 +106,13 @@ public class ServicoDAO {
 
     public List<Servico> buscarServicosPorDescricao(String descricao) {
         List<Servico> servicos = new ArrayList<>();
-        String sql = "SELECT * FROM servico WHERE descricao_servico LIKE ?";
+        String sql = "SELECT * FROM servico WHERE LOWER(descricao_servico) LIKE ?";
         try {
             Connection connection = DBConnection.getInstance().getConnection();
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, descricao + "%");
+            // Adiciona o caractere '%' para permitir a busca por qualquer texto que comece
+            // com a descrição fornecida
+            preparedStatement.setString(1, descricao.trim().toLowerCase() + "%");
             ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 Servico servico = new Servico();

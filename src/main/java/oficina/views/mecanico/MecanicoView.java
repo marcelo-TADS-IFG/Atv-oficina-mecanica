@@ -286,11 +286,11 @@ public class MecanicoView extends Composite<VerticalLayout> {
                     emailFieldCpf.setValue(mecanico.getCpf());
                     textFieldCidade.setValue(mecanico.getCidade());
                     textFieldTelefone.setValue(mecanico.getTelefone());
-
                     Notification.show("Mecânico encontrado.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     textFieldNome.focus();
                 } else {
+                    // Limpar todos os campos caso o mecânico não seja encontrado
                     textFieldNome.clear();
                     textFieldEndereco.clear();
                     emailFieldCpf.clear();
@@ -313,23 +313,42 @@ public class MecanicoView extends Composite<VerticalLayout> {
     private void abrirDialogoDePesquisaMecanico(TextField textFieldID, TextField textFieldNome,
             TextField textFieldEndereco,
             EmailField emailFieldCpf, TextField textFieldCidade, TextField textFieldTelefone) {
+
         Dialog dialog = new Dialog();
-        dialog.setWidth("400px");
+        dialog.setWidth("800px"); // Aumentei a largura para acomodar mais colunas
 
-        ComboBox<Mecanico> comboBox = new ComboBox<>("Buscar Mecânico");
-        comboBox.setPlaceholder("Digite o nome do mecânico");
-        comboBox.setItemLabelGenerator(Mecanico::getNome);
+        // Campo de busca
+        TextField searchField = new TextField("Buscar Mecânico");
+        searchField.setPlaceholder("Digite o nome do mecânico");
+        searchField.setWidthFull();
 
-        // Configura o comboBox para atualizar a lista conforme o usuário digita
-        comboBox.addCustomValueSetListener(event -> {
-            String nomeMecanico = event.getDetail().toLowerCase(); // Converte para minúsculas para busca
-                                                                   // case-insensitive
-            List<Mecanico> mecanicosFiltrados = mecanicoController.buscarMecanicosPorNome(nomeMecanico);
-            comboBox.setItems(mecanicosFiltrados);
+        // Grid para exibir os mecânicos
+        Grid<Mecanico> grid = new Grid<>(Mecanico.class, false);
+        grid.addColumn(Mecanico::getId).setHeader("ID").setAutoWidth(true);
+        grid.addColumn(Mecanico::getNome).setHeader("Nome").setAutoWidth(true);
+        grid.addColumn(Mecanico::getEndereco).setHeader("Endereço").setAutoWidth(true);
+        grid.addColumn(Mecanico::getCpf).setHeader("CPF").setAutoWidth(true);
+        grid.addColumn(Mecanico::getCidade).setHeader("Cidade").setAutoWidth(true);
+        grid.addColumn(Mecanico::getTelefone).setHeader("Telefone").setAutoWidth(true);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+
+        // Definir altura do grid manualmente
+        grid.setHeight("400px"); // Aumentei a altura para acomodar mais linhas
+
+        // Listener para buscar e exibir os mecânicos conforme o usuário digita
+        searchField.addValueChangeListener(event -> {
+            String nomeMecanico = event.getValue().trim().toLowerCase();
+            if (!nomeMecanico.isEmpty()) {
+                List<Mecanico> mecanicosFiltrados = mecanicoController.buscarMecanicosPorNome(nomeMecanico);
+                grid.setItems(mecanicosFiltrados);
+            } else {
+                grid.setItems(); // Limpa o grid se o campo de busca estiver vazio
+            }
         });
 
-        Button confirmarButton = new Button("Confirmar", e -> {
-            Mecanico mecanicoSelecionado = comboBox.getValue();
+        // Evento de duplo clique para selecionar um mecânico
+        grid.addItemDoubleClickListener(event -> {
+            Mecanico mecanicoSelecionado = event.getItem();
             if (mecanicoSelecionado != null) {
                 textFieldID.setValue(String.valueOf(mecanicoSelecionado.getId()));
                 textFieldNome.setValue(mecanicoSelecionado.getNome());
@@ -337,22 +356,46 @@ public class MecanicoView extends Composite<VerticalLayout> {
                 emailFieldCpf.setValue(mecanicoSelecionado.getCpf());
                 textFieldCidade.setValue(mecanicoSelecionado.getCidade());
                 textFieldTelefone.setValue(mecanicoSelecionado.getTelefone());
-
                 Notification.show("Mecânico selecionado: " + mecanicoSelecionado.getNome(), 3000,
                         Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a seleção
+            }
+        });
+
+        // Botões de ação
+        Button confirmarButton = new Button("Confirmar", e -> {
+            Mecanico mecanicoSelecionado = grid.asSingleSelect().getValue();
+            if (mecanicoSelecionado != null) {
+                textFieldID.setValue(String.valueOf(mecanicoSelecionado.getId()));
+                textFieldNome.setValue(mecanicoSelecionado.getNome());
+                textFieldEndereco.setValue(mecanicoSelecionado.getEndereco());
+                emailFieldCpf.setValue(mecanicoSelecionado.getCpf());
+                textFieldCidade.setValue(mecanicoSelecionado.getCidade());
+                textFieldTelefone.setValue(mecanicoSelecionado.getTelefone());
+                Notification.show("Mecânico selecionado: " + mecanicoSelecionado.getNome(), 3000,
+                        Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close(); // Fecha o diálogo após a confirmação
             } else {
                 Notification.show("Nenhum mecânico selecionado.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
-            dialog.close();
         });
 
         Button cancelarButton = new Button("Cancelar", e -> dialog.close());
 
-        VerticalLayout layout = new VerticalLayout(comboBox, confirmarButton, cancelarButton);
-        dialog.add(layout);
+        HorizontalLayout actions = new HorizontalLayout(confirmarButton, cancelarButton);
 
+        VerticalLayout layout = new VerticalLayout(searchField, grid, actions);
+        layout.setSizeFull();
+        layout.setSpacing(true);
+        layout.setPadding(true);
+
+        // Atribuindo flexGrow para que o Grid ocupe o espaço restante
+        layout.setFlexGrow(1, grid);
+
+        dialog.add(layout);
         dialog.open();
     }
 
