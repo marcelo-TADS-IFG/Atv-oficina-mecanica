@@ -16,6 +16,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
@@ -31,10 +32,7 @@ import com.vaadin.flow.theme.lumo.LumoUtility.Gap;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.checkerframework.checker.units.qual.m;
 
 import oficina.views.MainLayout;
 import java.math.BigDecimal;
@@ -46,11 +44,15 @@ import oficina.models.Cliente;
 import oficina.controllers.MecanicoController;
 import oficina.models.Mecanico;
 import oficina.controllers.VeiculoController;
-import oficina.models.Veiculo;
 import oficina.controllers.PecaController;
 import oficina.models.Peca;
 import oficina.controllers.ServicoController;
 import oficina.models.Servico;
+
+import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.ListItem;
+import com.vaadin.flow.component.html.OrderedList;
+import com.vaadin.flow.component.html.Paragraph;
 
 @PageTitle("Ordem de Serviço")
 @Route(value = "Ordem de Servico", layout = MainLayout.class)
@@ -203,15 +205,23 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 comboBoxCliente.setValue(osSelecionada.getCliente());
                 comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
 
-                // Setar múltiplas peças selecionadas
-                if (osSelecionada.getPecas() != null) {
-                    comboBoxPecas.setValue(osSelecionada.getPecas());
-                }
+                /*
+                 * Setar múltiplas peças selecionadas
+                 * if (osSelecionada.getPecas() != null) {
+                 * comboBoxPecas.setValue(osSelecionada.getPecas());
+                 * }
+                 * 
+                 * // Setar múltiplos serviços selecionados
+                 * if (osSelecionada.getServicos() != null) {
+                 * comboBoxServicos.setValue(osSelecionada.getServicos());
+                 * }
+                 */
 
-                // Setar múltiplos serviços selecionados
-                if (osSelecionada.getServicos() != null) {
-                    comboBoxServicos.setValue(osSelecionada.getServicos());
-                }
+                comboBoxPecas.deselectAll();
+                comboBoxPecas.setValue(new HashSet<>(osSelecionada.getPecas()));
+
+                comboBoxServicos.deselectAll();
+                comboBoxServicos.setValue(new HashSet<>(osSelecionada.getServicos()));
 
                 tabs.setSelectedTab(tabGerenciar); // Alterna para a aba "Gerenciar OS"
                 Notification.show("Ordem de Serviço Selecionada.", 3000, Notification.Position.MIDDLE)
@@ -546,8 +556,8 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
             DateTimePicker dateTimePickerDataAbertura,
             DateTimePicker dateTimePickerDataEncerramento, TextField textFieldValorTotal,
             ComboBox<Mecanico> comboBoxMecanico, ComboBox<Cliente> comboBoxCliente,
-            ComboBox<Veiculo> comboBoxVeiculo, MultiSelectComboBox<Peca> comboBoxPecas2,
-            MultiSelectComboBox<Servico> comboBoxServicos2) {
+            ComboBox<Veiculo> comboBoxVeiculo, MultiSelectComboBox<Peca> comboBoxPecas,
+            MultiSelectComboBox<Servico> comboBoxServicos) {
 
         // Criar a caixa de diálogo para a pesquisa
         Dialog dialog = new Dialog();
@@ -576,12 +586,11 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                     comboBoxCliente.setValue(osSelecionada.getCliente());
                     comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
 
-                    
-                    comboBoxPecas2.deselectAll(); 
-                    comboBoxPecas2.setValue(new HashSet<>(osSelecionada.getPecas()));
+                    comboBoxPecas.deselectAll();
+                    comboBoxPecas.setValue(new HashSet<>(osSelecionada.getPecas()));
 
-                    comboBoxServicos2.deselectAll(); 
-                    comboBoxServicos2.setValue(new HashSet<>(osSelecionada.getServicos()));
+                    comboBoxServicos.deselectAll();
+                    comboBoxServicos.setValue(new HashSet<>(osSelecionada.getServicos()));
 
                     Notification.show("Ordem de Serviço selecionada: " + osSelecionada.getNumero_os(), 3000,
                             Notification.Position.MIDDLE)
@@ -642,22 +651,60 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         gridConsultaOS.addColumn(OS -> OS.getMecanico().getNome()).setHeader("Mecanico");
         gridConsultaOS.addColumn(OS -> OS.getCliente().getNome()).setHeader("Cliente");
         gridConsultaOS.addColumn(OS -> OS.getVeiculo().getDescricao_veiculo()).setHeader("Veículo");
-
-        // Exibindo a lista de peças
-        gridConsultaOS.addColumn(OS -> OS.getPecas().stream()
-                .map(Peca::getDescricao)
-                .collect(Collectors.joining(", ")))
-                .setHeader("Peças");
-
-        // Exibindo a lista de serviços
-        gridConsultaOS.addColumn(OS -> OS.getServicos().stream()
-                .map(Servico::getDescricao_servico)
-                .collect(Collectors.joining(", ")))
-                .setHeader("Serviços");
+    
+        // Coluna de Peças com Dialog ao clicar
+        gridConsultaOS.addComponentColumn(OS -> {
+            Button pecasButton = new Button("Ver Peças");
+    
+            // Listener de click para abrir um Dialog com a lista de peças numerada
+            pecasButton.addClickListener(e -> {
+                Dialog pecasDialog = new Dialog();
+                pecasDialog.add(new Paragraph("Peças utilizadas na OS:"));
+                
+                // Iterando e numerando manualmente as peças
+                List<String> pecasList = OS.getPecas().stream()
+                    .map(Peca::getDescricao)
+                    .collect(Collectors.toList());
+                for (int i = 0; i < pecasList.size(); i++) {
+                    String numeracao = (i + 1) + ". " + pecasList.get(i);  // Adicionando o número
+                    pecasDialog.add(new Paragraph(numeracao));  // Adicionando como Paragraph
+                }
+                pecasDialog.setWidth("600px");
+                pecasDialog.setHeight("300px");
+                pecasDialog.open();
+            });
+    
+            return pecasButton;
+        }).setHeader("Peças");
+    
+        // Coluna de Serviços com Dialog ao clicar
+        gridConsultaOS.addComponentColumn(OS -> {
+            Button servicosButton = new Button("Ver Serviços");
+    
+            // Listener de click para abrir um Dialog com a lista de serviços numerada
+            servicosButton.addClickListener(e -> {
+                Dialog servicosDialog = new Dialog();
+                servicosDialog.add(new Paragraph("Serviços realizados na OS:"));
+                
+                // Iterando e numerando manualmente os serviços
+                List<String> servicosList = OS.getServicos().stream()
+                    .map(Servico::getDescricao_servico)
+                    .collect(Collectors.toList());
+                for (int i = 0; i < servicosList.size(); i++) {
+                    String numeracao = (i + 1) + ". " + servicosList.get(i);  // Adicionando o número
+                    servicosDialog.add(new Paragraph(numeracao));  // Adicionando como Paragraph
+                }
+                servicosDialog.setWidth("600px");
+                servicosDialog.setHeight("300px");
+                servicosDialog.open();
+            });
+    
+            return servicosButton;
+        }).setHeader("Serviços");
     }
 
-    record SampleItem(String value, String label, Boolean disabled) {
-    }
+    // record SampleItem(String value, String label, Boolean disabled) {
+    // }
 
     private void setComboBoxClientes(ComboBox<Cliente> comboBox) {
         List<Cliente> clientes = clienteController.buscarTodosClientes();
