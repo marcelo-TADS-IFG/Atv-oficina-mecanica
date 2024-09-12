@@ -16,7 +16,6 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
@@ -44,14 +43,12 @@ import oficina.models.Cliente;
 import oficina.controllers.MecanicoController;
 import oficina.models.Mecanico;
 import oficina.controllers.VeiculoController;
+import oficina.dao.ConexaoWhatsapp;
 import oficina.controllers.PecaController;
 import oficina.models.Peca;
 import oficina.controllers.ServicoController;
 import oficina.models.Servico;
 
-import com.vaadin.flow.component.html.Label;
-import com.vaadin.flow.component.html.ListItem;
-import com.vaadin.flow.component.html.OrderedList;
 import com.vaadin.flow.component.html.Paragraph;
 
 @PageTitle("Ordem de Serviço")
@@ -133,12 +130,15 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         h3.setWidth("100%");
         formLayout2Col.setWidth("100%");
         textFieldID.setLabel("ID");
+        textFieldID.setReadOnly(true);
         textFieldNumeroOS.setLabel("Numero OS");
+        textFieldNumeroOS.setReadOnly(true);
         dateTimeAberturaOS.setLabel("Data Abertura OS");
         dateTimeAberturaOS.setWidth("min-content");
         dateTimePickerEncerramentoOS.setLabel("Data encerramento OS");
         dateTimePickerEncerramentoOS.setWidth("min-content");
         textFieldValorTotal.setLabel("Valor Total");
+        textFieldValorTotal.setReadOnly(true);
         comboBoxCliente.setLabel("Cliente");
         comboBoxCliente.setWidth("min-content");
         setComboBoxClientes(comboBoxCliente);
@@ -173,10 +173,10 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         layoutColumn2.add(formLayout2Col);
         formLayout2Col.add(textFieldID);
         formLayout2Col.add(textFieldNumeroOS);
-        formLayout2Col.add(dateTimeAberturaOS);
-        formLayout2Col.add(dateTimePickerEncerramentoOS);
         formLayout2Col.add(textFieldValorTotal);
         formLayout2Col.add(comboBoxCliente);
+        formLayout2Col.add(dateTimeAberturaOS);
+        formLayout2Col.add(dateTimePickerEncerramentoOS);
         formLayout2Col.add(comboBoxMecanico);
         formLayout2Col.add(comboBoxVeiculo);
         formLayout2Col.add(comboBoxPecas);
@@ -205,25 +205,13 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 comboBoxCliente.setValue(osSelecionada.getCliente());
                 comboBoxVeiculo.setValue(osSelecionada.getVeiculo());
 
-                /*
-                 * Setar múltiplas peças selecionadas
-                 * if (osSelecionada.getPecas() != null) {
-                 * comboBoxPecas.setValue(osSelecionada.getPecas());
-                 * }
-                 * 
-                 * // Setar múltiplos serviços selecionados
-                 * if (osSelecionada.getServicos() != null) {
-                 * comboBoxServicos.setValue(osSelecionada.getServicos());
-                 * }
-                 */
-
                 comboBoxPecas.deselectAll();
                 comboBoxPecas.setValue(new HashSet<>(osSelecionada.getPecas()));
 
                 comboBoxServicos.deselectAll();
                 comboBoxServicos.setValue(new HashSet<>(osSelecionada.getServicos()));
 
-                tabs.setSelectedTab(tabGerenciar); // Alterna para a aba "Gerenciar OS"
+                tabs.setSelectedTab(tabGerenciar);
                 Notification.show("Ordem de Serviço Selecionada.", 3000, Notification.Position.MIDDLE)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             }
@@ -257,7 +245,7 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 if (sucesso) {
                     Notification.show("Ordem de Serviço salva com sucesso.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-
+                    ConexaoWhatsapp.EnviarMensagem(comboBoxCliente.getValue(), novaOS);
                     // Limpa os campos do formulário após salvar
                     textFieldNumeroOS.clear();
                     dateTimeAberturaOS.clear();
@@ -651,54 +639,56 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
         gridConsultaOS.addColumn(OS -> OS.getMecanico().getNome()).setHeader("Mecanico");
         gridConsultaOS.addColumn(OS -> OS.getCliente().getNome()).setHeader("Cliente");
         gridConsultaOS.addColumn(OS -> OS.getVeiculo().getDescricao_veiculo()).setHeader("Veículo");
-    
+
         // Coluna de Peças com Dialog ao clicar
         gridConsultaOS.addComponentColumn(OS -> {
             Button pecasButton = new Button("Ver Peças");
-    
+
             // Listener de click para abrir um Dialog com a lista de peças numerada
             pecasButton.addClickListener(e -> {
                 Dialog pecasDialog = new Dialog();
                 pecasDialog.add(new Paragraph("Peças utilizadas na OS:"));
-                
+
                 // Iterando e numerando manualmente as peças
                 List<String> pecasList = OS.getPecas().stream()
-                    .map(Peca::getDescricao)
-                    .collect(Collectors.toList());
+                        .map(Peca::getDescricao)
+                        .distinct()
+                        .collect(Collectors.toList());
                 for (int i = 0; i < pecasList.size(); i++) {
-                    String numeracao = (i + 1) + ". " + pecasList.get(i);  // Adicionando o número
-                    pecasDialog.add(new Paragraph(numeracao));  // Adicionando como Paragraph
+                    String numeracao = (i + 1) + ". " + pecasList.get(i); // Adicionando o número
+                    pecasDialog.add(new Paragraph(numeracao)); // Adicionando como Paragraph
                 }
                 pecasDialog.setWidth("600px");
                 pecasDialog.setHeight("300px");
                 pecasDialog.open();
             });
-    
+
             return pecasButton;
         }).setHeader("Peças");
-    
+
         // Coluna de Serviços com Dialog ao clicar
         gridConsultaOS.addComponentColumn(OS -> {
             Button servicosButton = new Button("Ver Serviços");
-    
+
             // Listener de click para abrir um Dialog com a lista de serviços numerada
             servicosButton.addClickListener(e -> {
                 Dialog servicosDialog = new Dialog();
                 servicosDialog.add(new Paragraph("Serviços realizados na OS:"));
-                
+
                 // Iterando e numerando manualmente os serviços
                 List<String> servicosList = OS.getServicos().stream()
-                    .map(Servico::getDescricao_servico)
-                    .collect(Collectors.toList());
+                        .map(Servico::getDescricao_servico)
+                        .distinct()
+                        .collect(Collectors.toList());
                 for (int i = 0; i < servicosList.size(); i++) {
-                    String numeracao = (i + 1) + ". " + servicosList.get(i);  // Adicionando o número
-                    servicosDialog.add(new Paragraph(numeracao));  // Adicionando como Paragraph
+                    String numeracao = (i + 1) + ". " + servicosList.get(i); // Adicionando o número
+                    servicosDialog.add(new Paragraph(numeracao)); // Adicionando como Paragraph
                 }
                 servicosDialog.setWidth("600px");
                 servicosDialog.setHeight("300px");
                 servicosDialog.open();
             });
-    
+
             return servicosButton;
         }).setHeader("Serviços");
     }

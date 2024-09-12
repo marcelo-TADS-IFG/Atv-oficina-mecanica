@@ -94,7 +94,15 @@
             <artifactId>vaadin-testbench-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-    </dependencies>
+        <!-- https://mvnrepository.com/artifact/com.twilio.sdk/twilio -->
+        <dependency>
+            <groupId>com.twilio.sdk</groupId>
+            <artifactId>twilio</artifactId>
+            <version>10.5.0</version>
+        </dependency>
+
+    </dependencies>  
+
 
     <build>
         <defaultGoal>spring-boot:run</defaultGoal>
