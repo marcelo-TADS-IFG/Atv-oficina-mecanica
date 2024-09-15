@@ -126,11 +126,13 @@ public class OSDAO {
     public boolean alterarOS(OS os) {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
-        try {
-            connection = DBConnection.getInstance().getConnection();
-            connection.setAutoCommit(false); // Iniciar transação
 
-            // Atualizar na tabela 'os'
+        try {
+            // Obtenha a conexão e inicie a transação
+            connection = DBConnection.getInstance().getConnection();
+            connection.setAutoCommit(false); // Iniciar transação manualmente
+
+            // Atualizar os dados da tabela 'os'
             String updateOS = "UPDATE os SET numero_os = ?, data_abertura_os = ?, data_encerramento_os = ?, valor_total = ?, id_mecanico = ?, id_cliente = ?, id_veiculo = ? WHERE id = ?";
             preparedStatement = connection.prepareStatement(updateOS);
             preparedStatement.setString(1, os.getNumero_os());
@@ -144,7 +146,7 @@ public class OSDAO {
             int resultado = preparedStatement.executeUpdate();
 
             if (resultado > 0) {
-                // Excluir entradas antigas nas tabelas 'os_peca' e 'os_servico'
+                // Limpar os dados antigos nas tabelas 'os_peca' e 'os_servico'
                 String deleteOSPeca = "DELETE FROM os_peca WHERE id_os = ?";
                 preparedStatement = connection.prepareStatement(deleteOSPeca);
                 preparedStatement.setInt(1, os.getId());
@@ -155,40 +157,47 @@ public class OSDAO {
                 preparedStatement.setInt(1, os.getId());
                 preparedStatement.executeUpdate();
 
-                // Inserir novas entradas na tabela 'os_peca'
+                // Inserir as novas peças associadas à OS
                 if (os.getPecas() != null && !os.getPecas().isEmpty()) {
                     String insertOSPeca = "INSERT INTO os_peca (id_os, id_peca) VALUES (?, ?)";
                     preparedStatement = connection.prepareStatement(insertOSPeca);
                     for (Peca peca : os.getPecas()) {
-                        if (peca != null && peca.getId() != 0) { // Verificar se a peça e o ID são válidos
+                        if (peca != null && peca.getId() > 0) {
                             preparedStatement.setInt(1, os.getId());
                             preparedStatement.setInt(2, peca.getId());
                             preparedStatement.addBatch();
+                        } else {
+                            System.out.println("Peça inválida com ID: " + (peca != null ? peca.getId() : "null"));
                         }
                     }
-                    preparedStatement.executeBatch();
+                    preparedStatement.executeBatch(); // Executa o batch de inserção de peças
                 }
 
-                // Inserir novas entradas na tabela 'os_servico'
+                // Inserir os novos serviços associados à OS
                 if (os.getServicos() != null && !os.getServicos().isEmpty()) {
                     String insertOSServico = "INSERT INTO os_servico (id_os, id_servico) VALUES (?, ?)";
                     preparedStatement = connection.prepareStatement(insertOSServico);
                     for (Servico servico : os.getServicos()) {
-                        if (servico != null && servico.getId() != 0) { // Verificar se o serviço e o ID são válidos
+                        if (servico != null && servico.getId() > 0) {
                             preparedStatement.setInt(1, os.getId());
                             preparedStatement.setInt(2, servico.getId());
                             preparedStatement.addBatch();
+                        } else {
+                            System.out.println(
+                                    "Serviço inválido com ID: " + (servico != null ? servico.getId() : "null"));
                         }
                     }
-                    preparedStatement.executeBatch();
+                    preparedStatement.executeBatch(); // Executa o batch de inserção de serviços
                 }
 
-                connection.commit(); // Confirmar transação
-                logger.log(Level.INFO, "Ordem de serviço alterada com sucesso: {0}", os.getNumero_os());
+                // Confirmar a transação se tudo deu certo
+                connection.commit();
+                System.out.println("Ordem de serviço alterada com sucesso.");
                 return true;
             } else {
-                connection.rollback(); // Reverter transação se falhar
-                logger.log(Level.SEVERE, "Erro ao atualizar a ordem de serviço: " + os.getNumero_os());
+                // Reverter a transação se a atualização falhar
+                connection.rollback();
+                System.out.println("Erro ao alterar a ordem de serviço. Nenhuma linha foi afetada.");
                 return false;
             }
         } catch (Exception e) {
@@ -197,22 +206,22 @@ public class OSDAO {
                     connection.rollback(); // Reverter transação em caso de erro
                 }
             } catch (SQLException rollbackEx) {
-                logger.log(Level.SEVERE, "Erro ao reverter transação: " + os.getNumero_os(), rollbackEx);
+                System.err.println("Erro ao reverter transação: " + rollbackEx.getMessage());
             }
-            logger.log(Level.SEVERE, "Erro ao alterar a ordem de serviço: " + os.getNumero_os(), e);
-            Notification notification = new Notification(
-                    "Erro ao alterar. Por favor, verifique a mensagem a seguir: " + e.getMessage());
-            notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
-            notification.open();
+            e.printStackTrace();
+            System.out.println("Erro ao alterar a ordem de serviço: " + e.getMessage());
             return false;
         } finally {
+            // Fechar os recursos
             try {
-                if (preparedStatement != null)
+                if (preparedStatement != null) {
                     preparedStatement.close();
-                if (connection != null)
+                }
+                if (connection != null) {
                     connection.close();
+                }
             } catch (SQLException closeEx) {
-                logger.log(Level.SEVERE, "Erro ao fechar os recursos", closeEx);
+                System.err.println("Erro ao fechar recursos: " + closeEx.getMessage());
             }
         }
     }

@@ -219,8 +219,26 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
 
         buttonPrimarySalvar.addClickListener(event -> {
             try {
-                // Obtém a data e hora informadas pelo usuário
+                // Obtém os valores dos campos
                 LocalDateTime dataAbertura = dateTimeAberturaOS.getValue();
+                LocalDateTime dataEncerramento = dateTimePickerEncerramentoOS.getValue();
+                String valorTotal = textFieldValorTotal.getValue();
+                Mecanico mecanico = comboBoxMecanico.getValue();
+                Cliente cliente = comboBoxCliente.getValue();
+                Veiculo veiculo = comboBoxVeiculo.getValue();
+                List<Peca> pecas = new ArrayList<>(comboBoxPecas.getSelectedItems());
+                List<Servico> servicos = new ArrayList<>(comboBoxServicos.getSelectedItems());
+
+                // Verifica se algum campo está vazio
+                if (dataAbertura == null || dataEncerramento == null || valorTotal.isEmpty() ||
+                        mecanico == null || cliente == null || veiculo == null || pecas.isEmpty()
+                        || servicos.isEmpty()) {
+                    Notification
+                            .show("Por favor, preencha todos os campos obrigatórios.", 5000,
+                                    Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    return;
+                }
 
                 // Gera o número da OS no formato desejado
                 String numeroOS = dataAbertura.format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
@@ -229,15 +247,13 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 OS novaOS = new OS();
                 novaOS.setNumero_os(numeroOS); // Define o número da OS automaticamente
                 novaOS.setData_abertura_os(dataAbertura);
-                novaOS.setData_encerramento_os(dateTimePickerEncerramentoOS.getValue());
-                novaOS.setValor_total(new BigDecimal(textFieldValorTotal.getValue()));
-                novaOS.setMecanico(comboBoxMecanico.getValue());
-                novaOS.setCliente(comboBoxCliente.getValue());
-                novaOS.setVeiculo(comboBoxVeiculo.getValue());
-
-                // Define a lista de peças e serviços selecionados
-                novaOS.setPecas(comboBoxPecas.getSelectedItems().stream().collect(Collectors.toList()));
-                novaOS.setServicos(comboBoxServicos.getSelectedItems().stream().collect(Collectors.toList()));
+                novaOS.setData_encerramento_os(dataEncerramento);
+                novaOS.setValor_total(new BigDecimal(valorTotal));
+                novaOS.setMecanico(mecanico);
+                novaOS.setCliente(cliente);
+                novaOS.setVeiculo(veiculo);
+                novaOS.setPecas(pecas);
+                novaOS.setServicos(servicos);
 
                 // Chama o método do controller para salvar a nova ordem de serviço
                 boolean sucesso = osController.adicionarOS(novaOS);
@@ -245,7 +261,16 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                 if (sucesso) {
                     Notification.show("Ordem de Serviço salva com sucesso.", 3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                    ConexaoWhatsapp.EnviarMensagem(comboBoxCliente.getValue(), novaOS);
+
+                    // Envia a mensagem via WhatsApp
+                    try {
+                        ConexaoWhatsapp.EnviarMensagem(cliente, novaOS);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Notification.show("Erro ao enviar a mensagem: " + e.getMessage(), 5000,
+                                Notification.Position.MIDDLE);
+                    }
+
                     // Limpa os campos do formulário após salvar
                     textFieldNumeroOS.clear();
                     dateTimeAberturaOS.clear();
@@ -447,7 +472,7 @@ public class OrdemdeServiçoView extends Composite<VerticalLayout> {
                                         comboBoxVeiculo.clear();
                                         comboBoxPecas.clear();
                                         comboBoxServicos.clear();
-                                        textFieldID.focus();
+                                        comboBoxCliente.focus();
                                         atualizarGridConsulta();
                                     } else {
                                         Notification.show("Erro ao excluir a Ordem de Serviço.", 3000,
